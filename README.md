@@ -1,4 +1,6 @@
-# 🔥 Cairnfire
+<h1 align="center">
+  <img src="assets/banner.png" alt="Cairnfire" width="720">
+</h1>
 
 **Mantém os saves dos teus jogos iguais no PC Windows e no Mac, sem servidor e sem copiar ficheiros à mão.**
 
@@ -194,6 +196,7 @@ Tudo fica em `~/.cairnfire/` (ou na pasta indicada pela variável `CAIRNFIRE_HOM
 ## Como está organizado o código
 
 ```
+assets/                      logo, banner e ícones (gerados por assets/make_logo.py)
 src/main/kotlin/cairnfire/
 ├── Main.kt        comandos da linha de comandos (Clikt) e o ciclo que corre cada jogo
 ├── SyncEngine.kt  o cérebro: decide o que copiar (merge a 3 vias), faz backups, calcula o novo estado
@@ -235,6 +238,13 @@ O Cairnfire está em desenvolvimento e é um projeto de estudo. Convém saber qu
 - Interface gráfica com Compose Multiplatform
 - Deteção de relógios desalinhados e avisos mais claros nos conflitos
 - Arranque automático no Linux (systemd)
+
+## Logo
+
+O símbolo é um *cairn* (aquelas pilhas de pedras que marcam um caminho) com a pedra do topo a arder: a chama
+ilumina as pedras e o título. Está desenhado em pixel art e é gerado por código, em
+[`assets/make_logo.py`](assets/make_logo.py) (`python3 assets/make_logo.py`, precisa de Pillow), que produz
+o banner, o logo em PNG/SVG e os ícones da app (`icon.icns` para macOS e `icon.ico` para Windows).
 
 ## Contribuir
 

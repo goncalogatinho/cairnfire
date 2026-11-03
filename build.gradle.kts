@@ -48,6 +48,8 @@ tasks.register<Exec>("jpackage") {
             // Runtime mínimo: a deteção automática arrastava o java.desktop (via JNA do Clikt), 100+ MB inúteis.
             addAll(listOf("--add-modules", "java.base,java.logging,jdk.unsupported"))
             addAll(listOf("--jlink-options", "--strip-debug --no-man-pages --no-header-files --compress zip-9"))
+            val icon = file("assets/" + if (isWindows) "icon.ico" else "icon.icns")
+            if (icon.exists()) addAll(listOf("--icon", icon.path))
             if (isWindows) add("--win-console") // é uma ferramenta de linha de comandos: precisa de consola
             else addAll(listOf("--java-options", "-Dapple.awt.UIElement=true")) // sem ícone na Dock (macOS)
         },
