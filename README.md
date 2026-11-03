@@ -4,8 +4,7 @@
 
 **Mantém os saves dos teus jogos iguais no PC Windows e no Mac, sem servidor e sem copiar ficheiros à mão.**
 
-Escrito em [Kotlin](https://kotlinlang.org/) por **Gonçalo Gatinho**, estudante de Licenciatura em Engenharia
-Informática (LEIC), como projeto pessoal.
+Escrito em [Kotlin](https://kotlinlang.org/) 
 
 ---
 
