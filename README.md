@@ -70,7 +70,7 @@ mudam coisas diferentes. Por isso o Cairnfire guarda uma "fotografia" (um hash S
 ### Compilar
 
 ```bash
-git clone https://github.com/<o-teu-utilizador>/cairnfire.git
+git clone https://github.com/goncalogatinho/cairnfire.git
 cd cairnfire
 ./gradlew installDist          # no Windows: gradlew.bat installDist
 ```
