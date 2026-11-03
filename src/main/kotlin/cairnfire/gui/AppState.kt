@@ -26,7 +26,7 @@ import kotlinx.coroutines.runInterruptible
 import java.nio.file.Path
 import java.time.LocalTime
 
-/** O que a interface mostra de cada jogo. */
+/** What the interface shows for each game. */
 sealed interface GameStatus {
     data object Checking : GameStatus
     data object Synced : GameStatus
@@ -37,7 +37,7 @@ sealed interface GameStatus {
 
 data class LogLine(val time: String, val text: String, val error: Boolean = false)
 
-/** O formulário de adicionar/editar um jogo. */
+/** The add/edit game form. */
 data class GameDraft(
     val name: String = "",
     val windows: String = "",
@@ -54,23 +54,23 @@ fun statusOf(report: GameReport): GameStatus = when {
 
 private fun plural(n: Int, one: String, many: String) = "$n ${if (n == 1) one else many}"
 
-/** "2 enviados · 1 trazido · 1 conflito": uma linha para o registo de atividade. */
+/** "2 pushed · 1 pulled · 1 conflict": one line for the activity log. */
 fun summary(actions: List<Action>): String {
     val pushed = actions.count { it.kind == Kind.PUSH }
     val pulled = actions.count { it.kind == Kind.PULL }
     val deleted = actions.count { it.kind == Kind.DELETE_LOCAL || it.kind == Kind.DELETE_REMOTE }
     val conflicts = actions.count { it.conflict }
     return listOfNotNull(
-        pushed.takeIf { it > 0 }?.let { plural(it, "enviado", "enviados") },
-        pulled.takeIf { it > 0 }?.let { plural(it, "trazido", "trazidos") },
-        deleted.takeIf { it > 0 }?.let { plural(it, "apagado", "apagados") },
-        conflicts.takeIf { it > 0 }?.let { plural(it, "conflito", "conflitos") },
+        pushed.takeIf { it > 0 }?.let { plural(it, "pushed", "pushed") },
+        pulled.takeIf { it > 0 }?.let { plural(it, "pulled", "pulled") },
+        deleted.takeIf { it > 0 }?.let { plural(it, "deleted", "deleted") },
+        conflicts.takeIf { it > 0 }?.let { plural(it, "conflict", "conflicts") },
     ).joinToString(" · ")
 }
 
 /**
- * Todo o estado da janela. Os comandos que mexem em ficheiros correm em threads de fundo; o estado em si é
- * "snapshot state" do Compose, por isso pode ser escrito de qualquer thread.
+ * All of the window's state. Commands that touch files run on background threads; the state itself is
+ * Compose "snapshot state", so it can be written from any thread.
  */
 class AppState(private val scope: CoroutineScope) {
     var config by mutableStateOf<Config?>(null)
@@ -93,14 +93,14 @@ class AppState(private val scope: CoroutineScope) {
         while (log.size > 200) log.removeAt(0)
     }
 
-    // ---------- carregar e verificar ----------
+    // ---------- load and check ----------
 
     fun load() {
         config = ConfigStore.loadOrNull()
         refresh()
     }
 
-    /** Vê o que cada jogo precisa (sem alterar nada). */
+    /** Checks what each game needs (without changing anything). */
     fun refresh() {
         val cfg = config ?: return
         scope.launch(Dispatchers.IO) { check(cfg) }
@@ -114,7 +114,7 @@ class AppState(private val scope: CoroutineScope) {
         }
     }
 
-    // ---------- sincronizar ----------
+    // ---------- sync ----------
 
     fun syncAll() {
         scope.launch(Dispatchers.IO) { guarded { syncAllBlocking(quiet = false) } }
@@ -134,9 +134,9 @@ class AppState(private val scope: CoroutineScope) {
         }
     }
 
-    /** Um ciclo completo (também usado pelo modo automático). Bloqueia até acabar. */
+    /** A full cycle (also used by automatic mode). Blocks until done. */
     fun syncAllBlocking(quiet: Boolean) {
-        val cfg = ConfigStore.loadOrNull() ?: throw CliktError("Ainda não há pasta da cloud configurada.")
+        val cfg = ConfigStore.loadOrNull() ?: throw CliktError("No cloud folder is configured yet.")
         config = cfg
         requireSyncRoot(cfg)
         synchronized(lock) {
@@ -154,45 +154,45 @@ class AppState(private val scope: CoroutineScope) {
         when {
             report.skipped != null -> say("[${game.name}] ${report.skipped}")
             report.actions.isNotEmpty() -> say("[${game.name}] ${summary(report.actions)}")
-            !quiet -> say("[${game.name}] tudo sincronizado.")
+            !quiet -> say("[${game.name}] everything is in sync.")
         }
         statusOf(report)
     } catch (e: Exception) {
-        say("[${game.name}] erro: ${e.message}", error = true)
-        GameStatus.Failed(e.message ?: "erro")
+        say("[${game.name}] error: ${e.message}", error = true)
+        GameStatus.Failed(e.message ?: "error")
     }
 
     private fun plan(cfg: Config, game: GameConfig): GameStatus = try {
         statusOf(syncGame(cfg, game, dryRun = true))
     } catch (e: Exception) {
-        GameStatus.Failed(e.message ?: "erro")
+        GameStatus.Failed(e.message ?: "error")
     }
 
-    /** Erros previsíveis (cloud não montada...) viram uma linha no registo em vez de rebentar a janela. */
+    /** Expected errors (cloud not mounted...) become a line in the log instead of crashing the window. */
     private inline fun guarded(block: () -> Unit) {
         try {
             block()
         } catch (e: CliktError) {
-            say(e.message ?: "erro", error = true)
+            say(e.message ?: "error", error = true)
         }
     }
 
-    // ---------- pasta da cloud ----------
+    // ---------- cloud folder ----------
 
     fun setSyncRoot(raw: String) {
         val root: Path = expandPath(raw)
         if (!java.nio.file.Files.isDirectory(root)) {
-            say("A pasta '$root' não existe.", error = true)
+            say("The folder '$root' does not exist.", error = true)
             return
         }
         val updated = Config(root.toString(), config?.games ?: emptyList())
         ConfigStore.save(updated)
         config = updated
-        say("Pasta da cloud: $root")
+        say("Cloud folder: $root")
         refresh()
     }
 
-    // ---------- jogos ----------
+    // ---------- games ----------
 
     fun newGame() { draft = GameDraft() }
 
@@ -216,7 +216,7 @@ class AppState(private val scope: CoroutineScope) {
         }
         val name = d.name.trim()
         if (!d.editing && cfg.games.any { it.name == name }) {
-            draft = d.copy(error = "Já existe um jogo com este nome.")
+            draft = d.copy(error = "A game with this name already exists.")
             return
         }
         val old = cfg.games.find { it.name == name }
@@ -225,18 +225,18 @@ class AppState(private val scope: CoroutineScope) {
             if (value.isEmpty()) paths.remove(os.key) else paths[os.key] = value
         }
         if (paths.isEmpty()) {
-            draft = d.copy(error = "Indica pelo menos uma pasta de saves.")
+            draft = d.copy(error = "Give at least one saves folder.")
             return
         }
         val updated = cfg.copy(games = cfg.games.filter { it.name != name } + GameConfig(name, paths))
         ConfigStore.save(updated)
         config = updated
         draft = null
-        say("Jogo '$name' guardado.")
+        say("Game '$name' saved.")
         refresh()
     }
 
-    /** Tira o jogo da lista. Não apaga nenhum ficheiro de saves, nem na cloud nem neste computador. */
+    /** Takes the game off the list. It does not delete any save files, in the cloud or on this computer. */
     fun removeGame(name: String) {
         val cfg = config ?: return
         val updated = cfg.copy(games = cfg.games.filter { it.name != name })
@@ -245,20 +245,20 @@ class AppState(private val scope: CoroutineScope) {
         config = updated
         statuses.remove(name)
         if (expanded == name) expanded = null
-        say("Jogo '$name' removido da lista (os ficheiros não foram tocados).")
+        say("Game '$name' removed from the list (the files were not touched).")
     }
 
-    // ---------- modo automático ----------
+    // ---------- automatic mode ----------
 
     fun enableAuto(on: Boolean) {
         auto = on
         autoJob?.cancel()
         autoJob = null
         if (!on) {
-            say("Sincronização automática desligada.")
+            say("Automatic sync turned off.")
             return
         }
-        say("Sincronização automática ligada.")
+        say("Automatic sync turned on.")
         autoJob = scope.launch(Dispatchers.IO) {
             try {
                 runInterruptible {
@@ -277,7 +277,7 @@ class AppState(private val scope: CoroutineScope) {
     }
 
     companion object {
-        /** Dados de exemplo para a pré-visualização da documentação: não toca em ficheiros. */
+        /** Sample data for the documentation preview: touches no files. */
         fun demo(scope: CoroutineScope, variant: String = "list"): AppState = AppState(scope).apply {
             config = Config(
                 "~/Google Drive/Cairnfire",
@@ -291,20 +291,20 @@ class AppState(private val scope: CoroutineScope) {
             statuses["Stardew Valley"] = GameStatus.Pending(
                 listOf(
                     Action(Kind.PUSH, "Farm_123456/Farm_123456"),
-                    Action(Kind.PULL, "Farm_123456/SaveGameInfo", conflict = true, note = "alterado nos dois lados; a cloud é mais recente"),
+                    Action(Kind.PULL, "Farm_123456/SaveGameInfo", conflict = true, note = "changed on both sides; cloud is newer"),
                     Action(Kind.PULL, "Farm_123456/Farm_123456_old"),
                 ),
             )
             statuses["Hades"] = GameStatus.Synced
             statuses["Celeste"] = GameStatus.Synced
-            statuses["Hollow Knight"] = GameStatus.Skipped("sem caminho configurado para mac; ignorado.")
+            statuses["Hollow Knight"] = GameStatus.Skipped("no path configured for mac; skipped.")
             when (variant) {
                 "expanded" -> { expanded = "Stardew Valley"; config = config?.copy(games = config!!.games.take(2)) }
                 "dialog" -> draft = GameDraft(name = "Stardew Valley", mac = "~/.config/StardewValley/Saves")
             }
-            log += LogLine("21:14:02", "Pasta da cloud: ~/Google Drive/Cairnfire")
-            log += LogLine("21:14:09", "[Hades] 1 enviado")
-            log += LogLine("21:14:09", "[Celeste] tudo sincronizado.")
+            log += LogLine("21:14:02", "Cloud folder: ~/Google Drive/Cairnfire")
+            log += LogLine("21:14:09", "[Hades] 1 pushed")
+            log += LogLine("21:14:09", "[Celeste] everything is in sync.")
         }
     }
 }

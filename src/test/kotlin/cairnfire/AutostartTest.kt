@@ -15,7 +15,7 @@ class AutostartTest {
     )
 
     @Test
-    fun `plist lanca o watch no login e reinicia se falhar`() {
+    fun `plist launches watch at login and restarts on failure`() {
         val plist = Autostart.macPlist(spec)
         assertContains(plist, "<key>Label</key><string>com.cairnfire.watch</string>")
         assertContains(plist, "<string>watch</string>")
@@ -26,14 +26,14 @@ class AutostartTest {
     }
 
     @Test
-    fun `plist escapa caracteres XML e inclui CAIRNFIRE_HOME quando definido`() {
+    fun `plist escapes XML characters and includes CAIRNFIRE_HOME when set`() {
         val plist = Autostart.macPlist(spec.copy(cairnfireHome = Path.of("/tmp/cf")))
         assertContains(plist, "/opt/cairnfire &amp; co/bin/cairnfire")
         assertContains(plist, "<key>CAIRNFIRE_HOME</key><string>/tmp/cf</string>")
     }
 
     @Test
-    fun `cmd do Windows fixa o JDK e escreve o log`() {
+    fun `Windows cmd pins the JDK and writes the log`() {
         val cmd = Autostart.windowsCmd(spec)
         assertContains(cmd, "set \"JAVA_HOME=/jdk/21\"")
         assertContains(cmd, "\" watch >> \"")
@@ -41,7 +41,7 @@ class AutostartTest {
     }
 
     @Test
-    fun `vbs corre o cmd escondido`() {
+    fun `vbs runs the cmd hidden`() {
         val vbs = Autostart.windowsVbs(Path.of("C:/Users/u/.cairnfire/watch.cmd"))
         assertContains(vbs, "\"\"\"")
         assertContains(vbs, ", 0, False")

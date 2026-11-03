@@ -9,18 +9,18 @@ import kotlin.test.assertIs
 
 class AppStateTest {
     @Test
-    fun `sem alteracoes o jogo esta sincronizado`() {
+    fun `with no changes the game is in sync`() {
         assertEquals(GameStatus.Synced, statusOf(GameReport("Hades")))
     }
 
     @Test
-    fun `um jogo saltado mostra o motivo`() {
-        val status = statusOf(GameReport("Hades", skipped = "sem caminho"))
-        assertEquals(GameStatus.Skipped("sem caminho"), status)
+    fun `a skipped game shows the reason`() {
+        val status = statusOf(GameReport("Hades", skipped = "no path"))
+        assertEquals(GameStatus.Skipped("no path"), status)
     }
 
     @Test
-    fun `alteracoes pendentes ficam guardadas`() {
+    fun `pending changes are kept`() {
         val actions = listOf(Action(Kind.PUSH, "a.sav"), Action(Kind.PULL, "b.sav", conflict = true))
         val status = statusOf(GameReport("Hades", actions))
         assertIs<GameStatus.Pending>(status)
@@ -28,22 +28,22 @@ class AppStateTest {
     }
 
     @Test
-    fun `o resumo conta enviados trazidos apagados e conflitos`() {
+    fun `the summary counts pushed, pulled, deleted and conflicts`() {
         val actions = listOf(
             Action(Kind.PUSH, "a"), Action(Kind.PUSH, "b"),
             Action(Kind.PULL, "c", conflict = true),
             Action(Kind.DELETE_LOCAL, "d"), Action(Kind.DELETE_REMOTE, "e"),
         )
-        assertEquals("2 enviados · 1 trazido · 2 apagados · 1 conflito", summary(actions))
+        assertEquals("2 pushed · 1 pulled · 2 deleted · 1 conflict", summary(actions))
     }
 
     @Test
-    fun `o resumo usa o singular`() {
-        assertEquals("1 enviado", summary(listOf(Action(Kind.PUSH, "a"))))
+    fun `the summary uses the singular`() {
+        assertEquals("1 pushed", summary(listOf(Action(Kind.PUSH, "a"))))
     }
 
     @Test
-    fun `sem acoes o resumo e vazio`() {
+    fun `with no actions the summary is empty`() {
         assertEquals("", summary(emptyList()))
     }
 }

@@ -58,7 +58,7 @@ class SyncEngineTest {
         if (!backups.exists()) emptyList() else Files.walk(backups).use { s -> s.filter { it.isRegularFile() }.collect(Collectors.toList()) }
 
     @Test
-    fun `novo ficheiro local vai para a cloud`() {
+    fun `new local file is pushed to the cloud`() {
         write(local, "slot1/save.dat", "A")
         val actions = sync()
         assertEquals(listOf(Action(Kind.PUSH, "slot1/save.dat")), actions)
@@ -66,7 +66,7 @@ class SyncEngineTest {
     }
 
     @Test
-    fun `novo ficheiro na cloud vem para o local`() {
+    fun `new cloud file is pulled to local`() {
         write(remote, "save.dat", "B")
         val actions = sync()
         assertEquals(listOf(Action(Kind.PULL, "save.dat")), actions)
@@ -74,14 +74,14 @@ class SyncEngineTest {
     }
 
     @Test
-    fun `segunda sincronizacao sem alteracoes nao faz nada`() {
+    fun `second sync with no changes does nothing`() {
         write(local, "save.dat", "A")
         sync()
         assertTrue(sync().isEmpty())
     }
 
     @Test
-    fun `dry run nao altera nada`() {
+    fun `dry run changes nothing`() {
         write(local, "save.dat", "A")
         val actions = sync(dryRun = true)
         assertEquals(1, actions.size)
@@ -90,7 +90,7 @@ class SyncEngineTest {
     }
 
     @Test
-    fun `alteracao local e enviada e a versao antiga fica em backup`() {
+    fun `local change is pushed and the old version is backed up`() {
         write(local, "save.dat", "v1")
         sync()
         write(local, "save.dat", "v2", mtime = System.currentTimeMillis() + 5_000)
@@ -101,24 +101,24 @@ class SyncEngineTest {
     }
 
     @Test
-    fun `conflito ganha o mais recente e o perdedor fica em backup`() {
+    fun `on conflict the newest wins and the loser is backed up`() {
         val t = System.currentTimeMillis()
         write(local, "save.dat", "base", mtime = t)
         sync()
 
-        write(local, "save.dat", "do-windows", mtime = t + 1_000)
-        write(remote, "save.dat", "do-mac", mtime = t + 2_000)
+        write(local, "save.dat", "from-windows", mtime = t + 1_000)
+        write(remote, "save.dat", "from-mac", mtime = t + 2_000)
 
         val actions = sync()
         assertEquals(1, actions.size)
         assertEquals(Kind.PULL, actions[0].kind)
         assertTrue(actions[0].conflict)
-        assertEquals("do-mac", local.resolve("save.dat").readText())
-        assertTrue(backedUp().any { it.readText() == "do-windows" })
+        assertEquals("from-mac", local.resolve("save.dat").readText())
+        assertTrue(backedUp().any { it.readText() == "from-windows" })
     }
 
     @Test
-    fun `apagar localmente apaga na cloud com backup`() {
+    fun `deleting locally deletes in the cloud with a backup`() {
         write(local, "save.dat", "A")
         sync()
         local.resolve("save.dat").deleteExisting()
@@ -131,7 +131,7 @@ class SyncEngineTest {
     }
 
     @Test
-    fun `apagado na cloud mas alterado localmente mantem o ficheiro`() {
+    fun `deleted in the cloud but changed locally keeps the file`() {
         val t = System.currentTimeMillis()
         write(local, "save.dat", "A", mtime = t)
         sync()
@@ -145,7 +145,7 @@ class SyncEngineTest {
     }
 
     @Test
-    fun `ficheiros de lixo do sistema sao ignorados`() {
+    fun `system junk files are ignored`() {
         write(local, ".DS_Store", "x")
         write(local, "Thumbs.db", "x")
         assertTrue(sync().isEmpty())

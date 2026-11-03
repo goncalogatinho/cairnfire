@@ -65,16 +65,16 @@ private fun Header(state: AppState, cfg: Config?, banner: androidx.compose.ui.gr
         Image(
             banner,
             contentDescription = "Cairnfire",
-            modifier = Modifier.height((banner.height / 2).dp).aspectRatio(banner.width / banner.height.toFloat()), // 4 px por pixel de arte = 2 dp
+            modifier = Modifier.height((banner.height / 2).dp).aspectRatio(banner.width / banner.height.toFloat()), // 4 px per art pixel = 2 dp
             contentScale = ContentScale.Fit,
-            filterQuality = FilterQuality.None, // pixel art: nunca suavizar
+            filterQuality = FilterQuality.None, // pixel art: never smooth
         )
         Spacer(Modifier.weight(1f))
         if (cfg != null) {
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                PixelToggle(state.auto, "Automático", state::enableAuto)
+                PixelToggle(state.auto, "Automatic", state::enableAuto)
                 PixelButton(
-                    if (state.busy) "A sincronizar…" else "Sincronizar tudo",
+                    if (state.busy) "Syncing…" else "Sync all",
                     onClick = state::syncAll,
                     primary = true,
                     enabled = !state.busy && cfg.games.isNotEmpty(),
@@ -90,28 +90,28 @@ private fun Welcome(state: AppState) {
         Modifier.fillMaxWidth().panel(Px.BorderHi).padding(28.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        PxText("Vamos começar.", color = Px.TextHi, size = 16.sp, bold = true)
+        PxText("Let's get started.", color = Px.TextHi, size = 16.sp, bold = true)
         PxText(
-            "Escolhe a pasta da tua cloud (Google Drive, Dropbox, OneDrive…). É lá que o Cairnfire deixa os saves " +
-                "para o teu outro computador os apanhar.",
+            "Choose your cloud folder (Google Drive, Dropbox, OneDrive…). That is where Cairnfire leaves the saves " +
+                "for your other computer to pick up.",
             color = Px.Text,
         )
         Spacer(Modifier.height(6.dp))
-        PixelButton("Escolher pasta…", onClick = { pickFolder("Pasta da cloud")?.let(state::setSyncRoot) }, primary = true)
+        PixelButton("Choose folder…", onClick = { pickFolder("Cloud folder")?.let(state::setSyncRoot) }, primary = true)
     }
 }
 
 @Composable
 private fun CloudFolder(state: AppState, cfg: Config) {
     Column {
-        Label("Pasta da cloud")
+        Label("Cloud folder")
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f).panel().padding(horizontal = 12.dp, vertical = 9.dp)) {
                 PxText(cfg.syncRoot, color = Px.TextHi, maxLines = 1)
             }
             Spacer(Modifier.width(10.dp))
-            PixelButton("Alterar", onClick = { pickFolder("Pasta da cloud")?.let(state::setSyncRoot) })
+            PixelButton("Change", onClick = { pickFolder("Cloud folder")?.let(state::setSyncRoot) })
         }
     }
 }
@@ -120,15 +120,15 @@ private fun CloudFolder(state: AppState, cfg: Config) {
 private fun Games(state: AppState, cfg: Config, modifier: Modifier) {
     Column(modifier) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Label("Jogos")
+            Label("Games")
             Spacer(Modifier.weight(1f))
-            PixelButton("+ Adicionar", onClick = state::newGame)
+            PixelButton("+ Add", onClick = state::newGame)
         }
         Spacer(Modifier.height(8.dp))
         if (cfg.games.isEmpty()) {
             Column(Modifier.fillMaxWidth().panel().padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                PxText("Ainda não tens jogos.", color = Px.TextHi, bold = true)
-                PxText("Adiciona o primeiro e diz onde ficam os saves em cada computador.", color = Px.Muted, size = 12.sp)
+                PxText("No games yet.", color = Px.TextHi, bold = true)
+                PxText("Add the first one and tell Cairnfire where the saves live on each computer.", color = Px.Muted, size = 12.sp)
             }
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -141,11 +141,11 @@ private fun Games(state: AppState, cfg: Config, modifier: Modifier) {
 }
 
 private fun GameStatus.text(): String = when (this) {
-    GameStatus.Checking -> "a verificar…"
-    GameStatus.Synced -> "sincronizado"
-    is GameStatus.Pending -> if (actions.size == 1) "1 alteração" else "${actions.size} alterações"
-    is GameStatus.Skipped -> "ignorado"
-    is GameStatus.Failed -> "erro"
+    GameStatus.Checking -> "checking…"
+    GameStatus.Synced -> "in sync"
+    is GameStatus.Pending -> if (actions.size == 1) "1 change" else "${actions.size} changes"
+    is GameStatus.Skipped -> "skipped"
+    is GameStatus.Failed -> "error"
 }
 
 private fun GameStatus.color(): Color = when (this) {
@@ -157,10 +157,10 @@ private fun GameStatus.color(): Color = when (this) {
 }
 
 private fun Kind.short(): String = when (this) {
-    Kind.PUSH -> "ENVIAR"
-    Kind.PULL -> "TRAZER"
-    Kind.DELETE_REMOTE -> "APAGAR NA CLOUD"
-    Kind.DELETE_LOCAL -> "APAGAR AQUI"
+    Kind.PUSH -> "UPLOAD"
+    Kind.PULL -> "DOWNLOAD"
+    Kind.DELETE_REMOTE -> "DELETE IN CLOUD"
+    Kind.DELETE_LOCAL -> "DELETE HERE"
 }
 
 @Composable
@@ -183,13 +183,13 @@ private fun GameRow(state: AppState, game: GameConfig, status: GameStatus) {
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 PxText(game.name, color = Px.TextHi, bold = true, maxLines = 1)
-                PxText(state.localPath(game) ?: "sem pasta neste computador", color = Px.Muted, size = 11.sp, maxLines = 1)
+                PxText(state.localPath(game) ?: "no folder on this computer", color = Px.Muted, size = 11.sp, maxLines = 1)
             }
             Spacer(Modifier.width(12.dp))
             PxText(status.text(), color = status.color(), size = 12.sp, maxLines = 1)
             Spacer(Modifier.width(14.dp))
             PixelButton(
-                "Sincronizar",
+                "Sync",
                 onClick = { state.syncOne(game.name) },
                 enabled = !state.busy && status !is GameStatus.Skipped,
             )
@@ -202,20 +202,20 @@ private fun GameRow(state: AppState, game: GameConfig, status: GameStatus) {
                     is GameStatus.Pending -> Changes(status.actions)
                     is GameStatus.Skipped -> PxText(status.reason, color = Px.Muted, size = 12.sp)
                     is GameStatus.Failed -> PxText(status.message, color = Px.Red, size = 12.sp)
-                    GameStatus.Synced -> PxText("Tudo igual nos dois lados.", color = Px.Muted, size = 12.sp)
-                    GameStatus.Checking -> PxText("A verificar…", color = Px.Muted, size = 12.sp)
+                    GameStatus.Synced -> PxText("Identical on both sides.", color = Px.Muted, size = 12.sp)
+                    GameStatus.Checking -> PxText("Checking…", color = Px.Muted, size = 12.sp)
                 }
                 Spacer(Modifier.height(6.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    PixelButton("Editar", onClick = { state.editGame(game) })
+                    PixelButton("Edit", onClick = { state.editGame(game) })
                     Spacer(Modifier.width(10.dp))
                     PixelButton(
-                        if (confirmRemove) "Confirmar remoção" else "Remover",
+                        if (confirmRemove) "Confirm removal" else "Remove",
                         onClick = { if (confirmRemove) state.removeGame(game.name) else confirmRemove = true },
                     )
                     Spacer(Modifier.width(12.dp))
                     PxText(
-                        if (confirmRemove) "Só tira da lista; não apaga saves." else "",
+                        if (confirmRemove) "Only removes it from the list; never deletes saves." else "",
                         color = Px.Muted, size = 11.sp, maxLines = 1,
                     )
                 }
@@ -231,20 +231,20 @@ private fun Changes(actions: List<Action>) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             PxText(a.kind.short(), Modifier.width(130.dp), color = if (a.conflict) Px.Red else Px.Orange, size = 10.sp, bold = true, spacing = 1.sp)
             PxText(a.path, Modifier.weight(1f), color = Px.Text, size = 12.sp, maxLines = 1)
-            if (a.conflict) PxText("CONFLITO", color = Px.Red, size = 10.sp, bold = true, spacing = 1.sp)
+            if (a.conflict) PxText("CONFLICT", color = Px.Red, size = 10.sp, bold = true, spacing = 1.sp)
         }
         a.note?.let { PxText(it, Modifier.padding(start = 130.dp), color = Px.Muted, size = 11.sp, maxLines = 1) }
     }
-    if (actions.size > shown.size) PxText("… e mais ${actions.size - shown.size}", color = Px.Muted, size = 11.sp)
+    if (actions.size > shown.size) PxText("… and ${actions.size - shown.size} more", color = Px.Muted, size = 11.sp)
 }
 
 @Composable
 private fun Activity(state: AppState) {
     Column {
-        Label("Atividade")
+        Label("Activity")
         Spacer(Modifier.height(6.dp))
         Column(Modifier.fillMaxWidth().height(92.dp).panel().padding(horizontal = 12.dp, vertical = 9.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            if (state.log.isEmpty()) PxText("Sem atividade ainda.", color = Px.BorderHi, size = 11.sp)
+            if (state.log.isEmpty()) PxText("No activity yet.", color = Px.BorderHi, size = 11.sp)
             for (line in state.log.takeLast(4)) {
                 PxText("${line.time}  ${line.text}", color = if (line.error) Px.Red else Px.Muted, size = 11.sp, maxLines = 1)
             }
@@ -262,22 +262,22 @@ private fun GameDialog(state: AppState, d: GameDraft) {
         contentAlignment = Alignment.Center,
     ) {
         Column(Modifier.width(500.dp).panel(Px.BorderHi).padding(22.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Label(if (d.editing) "Editar jogo" else "Novo jogo")
+            Label(if (d.editing) "Edit game" else "New game")
 
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                PxText("Nome (é também o nome da pasta na cloud)", color = Px.Muted, size = 11.sp)
+                PxText("Name (also the folder name in the cloud)", color = Px.Muted, size = 11.sp)
                 PixelField(d.name, { state.draft = d.copy(name = it, error = null) }, Modifier.fillMaxWidth(), "Stardew Valley", enabled = !d.editing)
             }
-            PathField("Pasta de saves no Windows", d.windows, "%APPDATA%/StardewValley/Saves") { state.draft = d.copy(windows = it, error = null) }
-            PathField("Pasta de saves no Mac", d.mac, "~/.config/StardewValley/Saves") { state.draft = d.copy(mac = it, error = null) }
-            PxText("Basta preencher a do computador onde estás; podes completar a outra mais tarde.", color = Px.Muted, size = 11.sp)
+            PathField("Saves folder on Windows", d.windows, "%APPDATA%/StardewValley/Saves") { state.draft = d.copy(windows = it, error = null) }
+            PathField("Saves folder on Mac", d.mac, "~/.config/StardewValley/Saves") { state.draft = d.copy(mac = it, error = null) }
+            PxText("Fill in only the one for the computer you are on; you can add the other later.", color = Px.Muted, size = 11.sp)
 
             d.error?.let { PxText(it, color = Px.Red, size = 12.sp) }
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                PixelButton("Cancelar", onClick = { state.draft = null })
+                PixelButton("Cancel", onClick = { state.draft = null })
                 Spacer(Modifier.width(10.dp))
-                PixelButton("Guardar", onClick = state::saveDraft, primary = true)
+                PixelButton("Save", onClick = state::saveDraft, primary = true)
             }
         }
     }
@@ -290,7 +290,7 @@ private fun PathField(label: String, value: String, placeholder: String, onChang
         Row(verticalAlignment = Alignment.CenterVertically) {
             PixelField(value, onChange, Modifier.weight(1f), placeholder)
             Spacer(Modifier.width(10.dp))
-            PixelButton("Escolher…", onClick = { pickFolder(label)?.let(onChange) })
+            PixelButton("Choose…", onClick = { pickFolder(label)?.let(onChange) })
         }
     }
 }

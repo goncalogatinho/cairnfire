@@ -13,14 +13,14 @@ import java.util.concurrent.TimeUnit
 import kotlin.io.path.isDirectory
 
 /**
- * Vigia pastas (e subpastas) e avisa quando algo muda. Só diz "mudou alguma coisa": quem decide o que
- * copiar continua a ser o [SyncEngine], por isso eventos a mais ou a menos nunca estragam nada.
+ * Watches folders (and subfolders) and reports when something changes. It only says "something changed":
+ * what to copy is still decided by the [SyncEngine], so extra or missing events never break anything.
  */
 class ChangeWatcher : AutoCloseable {
     private val service = FileSystems.getDefault().newWatchService()
     private val registered = mutableSetOf<Path>()
 
-    /** Regista [root] e todas as subpastas. Pode ser chamado de novo para apanhar pastas criadas entretanto. */
+    /** Registers [root] and all its subfolders. Can be called again to pick up folders created in the meantime. */
     fun watch(root: Path) {
         if (!root.isDirectory()) return
         val dirs = Files.walk(root).use { stream -> stream.filter { it.isDirectory() }.toList() }
@@ -29,12 +29,12 @@ class ChangeWatcher : AutoCloseable {
             try {
                 dir.register(service, ENTRY_CREATE, ENTRY_MODIFY, ENTRY_DELETE)
             } catch (e: IOException) {
-                registered.remove(dir) // a pasta desapareceu entretanto; tenta-se de novo no próximo ciclo
+                registered.remove(dir) // the folder disappeared in the meantime; tried again on the next cycle
             }
         }
     }
 
-    /** Espera até [timeoutMillis] por uma alteração. Devolve true se houve alguma. */
+    /** Waits up to [timeoutMillis] for a change. Returns true if there was one. */
     fun awaitChange(timeoutMillis: Long): Boolean {
         val key = service.poll(timeoutMillis, TimeUnit.MILLISECONDS) ?: return false
         handle(key)
@@ -42,8 +42,8 @@ class ChangeWatcher : AutoCloseable {
     }
 
     /**
-     * Espera que as alterações acalmem: só regressa depois de [quietMillis] sem eventos, ou ao fim de
-     * [maxMillis]. Assim não se copia um save enquanto o jogo ainda o está a escrever.
+     * Waits for changes to settle: only returns after [quietMillis] without events, or after
+     * [maxMillis]. This way a save is not copied while the game is still writing it.
      */
     fun awaitQuiet(quietMillis: Long, maxMillis: Long) {
         val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(maxMillis)
@@ -61,7 +61,7 @@ class ChangeWatcher : AutoCloseable {
     override fun close() = service.close()
 }
 
-/** As pastas a vigiar: os saves locais de cada jogo e a respetiva pasta na cloud. */
+/** The folders to watch: each game's local saves and its folder in the cloud. */
 fun watchedDirs(config: Config = ConfigStore.load()): List<Path> {
     val platform = Platform.current()
     return config.games.flatMap { game ->
@@ -73,9 +73,9 @@ fun watchedDirs(config: Config = ConfigStore.load()): List<Path> {
 }
 
 /**
- * O ciclo do modo automático: corre [cycle] e depois espera por alterações (ou [intervalSec] segundos) antes de
- * repetir. Não termina sozinho: pára quando a thread é interrompida. Erros previsíveis (cloud não montada, E/S)
- * vão para [onError] e o ciclo tenta outra vez mais tarde.
+ * The automatic mode loop: runs [cycle] and then waits for changes (or [intervalSec] seconds) before
+ * repeating. It never ends by itself: it stops when the thread is interrupted. Expected errors (cloud not
+ * mounted, I/O) go to [onError] and the loop tries again later.
  */
 fun watchLoop(intervalSec: Int, debounceSec: Int, onError: (String) -> Unit, cycle: () -> Unit) {
     ChangeWatcher().use { watcher ->
@@ -84,9 +84,9 @@ fun watchLoop(intervalSec: Int, debounceSec: Int, onError: (String) -> Unit, cyc
                 cycle()
                 watchedDirs().forEach(watcher::watch)
             } catch (e: CliktError) {
-                onError(e.message ?: "erro") // por exemplo a cloud não está montada; tenta-se de novo mais tarde
+                onError(e.message ?: "error") // for example the cloud is not mounted; tried again later
             } catch (e: IOException) {
-                onError("Erro de E/S: ${e.message}")
+                onError("I/O error: ${e.message}")
             }
             if (watcher.awaitChange(intervalSec * 1000L)) {
                 watcher.awaitQuiet(debounceSec * 1000L, maxMillis = 60_000)

@@ -2,135 +2,134 @@
   <img src="assets/banner.png" alt="Cairnfire" width="720">
 </h1>
 
-**Mantém os saves dos teus jogos iguais no PC Windows e no Mac, sem servidor e sem copiar ficheiros à mão.**
+**Keep your game saves identical on your Windows PC and your Mac, with no server and no copying files by hand.**
 
-Escrito em [Kotlin](https://kotlinlang.org/) 
+Written in [Kotlin](https://kotlinlang.org/)
 
 ---
 
-## O que é isto, em poucas palavras
+## What is this, in a few words
 
-Jogas no PC de manhã e queres continuar à noite no Mac? Normalmente tens de copiar os ficheiros de save de um
-lado para o outro, e basta esqueceres-te uma vez para perderes horas de progresso.
+You play on your PC in the morning and want to carry on in the evening on your Mac? Normally you have to copy the
+save files from one machine to the other, and forgetting just once can cost you hours of progress.
 
-O Cairnfire faz isso por ti. Tu dizes onde ficam os saves de cada jogo em cada computador, e ele usa uma pasta
-da tua cloud (Google Drive, Dropbox, OneDrive…) como ponto de encontro:
+Cairnfire does that for you. You tell it where each game keeps its saves on each computer, and it uses a folder in
+your cloud (Google Drive, Dropbox, OneDrive…) as the meeting point:
 
 ```
-  PC Windows                    Cloud                        Mac
- ┌───────────┐   envia    ┌───────────────┐   traz     ┌───────────┐
- │  saves A  │ ─────────► │ pasta partilh.│ ◄───────── │  saves B  │
- └───────────┘ ◄───────── └───────────────┘ ─────────► └───────────┘
-                  traz                        envia
+  Windows PC                    Cloud                        Mac
+ ┌───────────┐    pushes   ┌───────────────┐    pulls    ┌───────────┐
+ │  saves A  │ ──────────► │ shared folder │ ◄────────── │  saves B  │
+ └───────────┘ ◄────────── └───────────────┘ ──────────► └───────────┘
+                  pulls                        pushes
 ```
 
-Quando acabas de jogar num computador, o Cairnfire envia o save novo para a cloud. Quando abres o outro, ele
-traz-o. Se alguma coisa correr mal, a versão antiga fica guardada num backup.
+When you finish playing on one computer, Cairnfire pushes the new save to the cloud. When you open the other one,
+it pulls it down. If anything goes wrong, the old version is kept in a backup.
 
-> **Importante:** o Cairnfire não é uma cloud. Quem leva os ficheiros de uma máquina à outra é o teu Drive/Dropbox/
-> OneDrive; o Cairnfire só decide *o que* copiar e protege-te de perder saves pelo caminho.
+> **Important:** Cairnfire is not a cloud. Your Drive/Dropbox/OneDrive is what carries the files from one machine
+> to the other; Cairnfire only decides *what* to copy and keeps you from losing saves along the way.
 
-## Como decide o que copiar
+## How it decides what to copy
 
-A ideia mais simples seria "ganha o ficheiro mais recente", mas isso perde saves quando os dois computadores
-mudam coisas diferentes. Por isso o Cairnfire guarda uma "fotografia" (um hash SHA-256) de cada ficheiro **na
-última vez em que sincronizou** e compara três versões: a local, a da cloud e essa fotografia.
+The simplest idea would be "the newest file wins", but that loses saves when both computers change different
+things. So Cairnfire keeps a "snapshot" (a SHA-256 hash) of every file **as of the last time it synced** and
+compares three versions: the local one, the cloud one and that snapshot.
 
-| Local | Cloud | O que acontece |
-|-------|-------|----------------|
-| mudou | igual à última vez | envia para a cloud |
-| igual à última vez | mudou | traz da cloud |
-| mudou | mudou | **conflito**: fica o mais recente e o outro vai para backup |
-| ficheiro novo | não existe | envia para a cloud |
-| apagado | igual à última vez | apaga também na cloud (com backup) |
-| apagado | mudou | **não apaga**: mantém o ficheiro que foi alterado |
+| Local | Cloud | What happens |
+|-------|-------|--------------|
+| changed | same as last time | pushed to the cloud |
+| same as last time | changed | pulled from the cloud |
+| changed | changed | **conflict**: the newest is kept and the other goes to backup |
+| new file | does not exist | pushed to the cloud |
+| deleted | same as last time | also deleted in the cloud (with a backup) |
+| deleted | changed | **not deleted**: the changed file is kept |
 
-## Como o Cairnfire protege os teus saves
+## How Cairnfire protects your saves
 
-- **Backup antes de tudo.** Qualquer ficheiro que vá ser substituído ou apagado é primeiro copiado para
-  `~/.cairnfire/backups/<jogo>/<data-hora>/`.
-- **Cópia à prova de falhas.** Copia para um ficheiro temporário e só depois o move para o sítio final. Se o
-  computador desligar a meio, nunca fica um save a metade.
-- **Cloud não montada = não faz nada.** Se a pasta da cloud não existir (por exemplo, o Drive ainda não arrancou),
-  o programa pára em vez de achar que "foi tudo apagado".
-- **Pasta desaparecida = ignora o jogo.** Se uma pasta que já foi sincronizada deixar de existir (caminho errado,
-  disco desligado), esse jogo é saltado em vez de apagar tudo do outro lado.
-- **Espera que o jogo acabe de escrever.** No modo automático, só sincroniza depois de a pasta ficar uns segundos
-  sossegada.
-- **Ignora lixo do sistema:** `.DS_Store`, `Thumbs.db`, `desktop.ini`.
+- **Backup before anything.** Any file that is about to be replaced or deleted is first copied to
+  `~/.cairnfire/backups/<game>/<date-time>/`.
+- **Crash-safe copies.** It copies to a temporary file and only then moves it into place. If the computer shuts
+  down halfway, you never end up with a half-written save.
+- **Cloud not mounted = does nothing.** If the cloud folder does not exist (for example, Drive has not started
+  yet), the program stops instead of assuming "everything was deleted".
+- **Missing folder = game skipped.** If a folder that was already synced stops existing (wrong path, unplugged
+  disk), that game is skipped instead of wiping everything on the other side.
+- **Waits for the game to finish writing.** In automatic mode it only syncs after the folder has been quiet for a
+  few seconds.
+- **Ignores system junk:** `.DS_Store`, `Thumbs.db`, `desktop.ini`.
 
-## Instalação
+## Installation
 
-### O que precisas
+### What you need
 
-- Um **JDK 17 a 21** (por exemplo [Temurin](https://adoptium.net/) 21) para compilar. O Gradle 8.14 e o Kotlin 2.1
-  ainda não funcionam com JDK 25 ou mais recente.
-  No macOS, se tiveres vários JDKs: `export JAVA_HOME=$(/usr/libexec/java_home -v 21)`
-- Uma pasta de cloud sincronizada nos dois computadores (Google Drive, Dropbox, OneDrive…).
+- A **JDK 17 to 21** (for example [Temurin](https://adoptium.net/) 21) to build it. Gradle 8.14 and Kotlin 2.1
+  do not work with JDK 25 or newer yet.
+  On macOS, if you have several JDKs: `export JAVA_HOME=$(/usr/libexec/java_home -v 21)`
+- A cloud folder that is synced on both computers (Google Drive, Dropbox, OneDrive…).
 
-### Compilar
+### Build
 
 ```bash
 git clone https://github.com/goncalogatinho/cairnfire.git
 cd cairnfire
-./gradlew installDist          # no Windows: gradlew.bat installDist
+./gradlew installDist          # on Windows: gradlew.bat installDist
 ```
 
-O executável fica em `build/install/cairnfire/bin/cairnfire` (`cairnfire.bat` no Windows). Para o usares de
-qualquer lado, adiciona essa pasta `bin` ao `PATH`.
+The executable ends up in `build/install/cairnfire/bin/cairnfire` (`cairnfire.bat` on Windows). To use it from
+anywhere, add that `bin` folder to your `PATH`.
 
-### Versão sem Java instalado (opcional)
+### Version without Java installed (optional)
 
 ```bash
 ./gradlew jpackage
 ```
 
-Gera em `build/jpackage/` uma app com um Java mínimo lá dentro (cerca de 90 MB, por causa da janela), por isso a
-máquina onde a usares não precisa de ter Java:
+This produces, in `build/jpackage/`, an app with a minimal Java inside (about 90 MB, because of the window), so
+the machine you run it on does not need Java:
 
-- **macOS:** `build/jpackage/cairnfire.app` (executável em `cairnfire.app/Contents/MacOS/cairnfire`)
-- **Windows:** `build\jpackage\cairnfire\cairnfire.exe` (linha de comandos) e `cairnfire-gui.exe` (abre a janela, sem consola)
+- **macOS:** `build/jpackage/cairnfire.app` (executable at `cairnfire.app/Contents/MacOS/cairnfire`)
+- **Windows:** `build\jpackage\cairnfire\cairnfire.exe` (command line) and `cairnfire-gui.exe` (opens the window, no console)
 
-O `jpackage` não faz cross-compile: corre o comando em cada sistema para gerar a versão desse sistema. A app não
-está assinada, por isso, se a copiares de outro computador, o macOS pode bloqueá-la; o mais simples é compilar em
-cada máquina.
+`jpackage` does not cross-compile: run the command on each system to build that system's version. The app is not
+signed, so if you copy it from another computer macOS may block it; the simplest thing is to build on each machine.
 
-## A janela
+## The window
 
-Para quem prefere cliques à linha de comandos, o Cairnfire também tem uma janela simples:
+If you prefer clicking to typing commands, Cairnfire also has a simple window:
 
 ```bash
 cairnfire gui
 ```
 
 <p align="center">
-  <img src="assets/screenshot.png" alt="A janela do Cairnfire" width="640">
+  <img src="assets/screenshot.png" alt="The Cairnfire window" width="640">
 </p>
 
-- **Pasta da cloud** e **lista de jogos**, cada um com o seu estado: sincronizado, N alterações (laranja) ou
-  conflito (vermelho). Clica num jogo para ver exatamente o que vai ser copiado.
-- **Sincronizar** um jogo ou **Sincronizar tudo**. Antes de qualquer cópia, a janela mostra o que vai acontecer.
-- **Adicionar / Editar / Remover** jogos. Remover só tira o jogo da lista: nunca apaga saves.
-- **Automático** liga o modo `watch` dentro da janela (só enquanto ela estiver aberta). Para sincronizar também
-  com a janela fechada, usa o `autostart`.
-- **Atividade** mostra o que foi feito, com os erros a vermelho.
+- **Cloud folder** and **list of games**, each with its status: in sync, N changes (orange, or red when there is a
+  conflict). Click a game to see exactly what is going to be copied.
+- **Sync** one game or **Sync all**. Before anything is copied, the window shows what is going to happen.
+- **Add / Edit / Remove** games. Remove only takes the game off the list: it never deletes saves.
+- **Automatic** turns on `watch` mode inside the window (only while it is open). To also sync with the window
+  closed, use `autostart`.
+- **Activity** shows what was done, with errors in red.
 
-A janela usa o mesmo motor da linha de comandos, por isso as proteções (backups, cópia segura, cloud não montada)
-são exatamente as mesmas. Na app empacotada (`jpackage`), abrir sem argumentos, por exemplo com duplo clique,
-abre a janela.
+The window uses the same engine as the command line, so the protections (backups, safe copies, cloud not mounted)
+are exactly the same. In the packaged app (`jpackage`), opening it with no arguments, for example by
+double-clicking, opens the window.
 
-## Começar a usar
+## Getting started
 
-**1. Em cada computador, uma vez:** diz qual é a pasta da cloud (cada máquina tem o seu caminho, mas é a mesma
-pasta sincronizada).
+**1. On each computer, once:** tell it which folder is your cloud folder (each machine has its own path, but it is
+the same synced folder).
 
 ```bash
 cairnfire init --sync-root "~/Google Drive/Cairnfire"          # Mac
-cairnfire init --sync-root "G:/O Meu Disco/Cairnfire"          # Windows
+cairnfire init --sync-root "G:/My Drive/Cairnfire"             # Windows
 ```
 
-**2. Regista os jogos.** Podes dar os caminhos dos dois sistemas de uma vez (ou só o da máquina onde estás e
-completar depois noutra). Exemplo com o Stardew Valley:
+**2. Register your games.** You can give the paths for both systems at once (or just the one for the machine you
+are on and fill in the other later). Example with Stardew Valley:
 
 ```bash
 cairnfire add "Stardew Valley" \
@@ -138,59 +137,59 @@ cairnfire add "Stardew Valley" \
   --mac "~/.config/StardewValley/Saves"
 ```
 
-Os caminhos aceitam `~`, `%VARIAVEL%` e `${VARIAVEL}`. O nome do jogo passa a ser o nome da pasta na cloud.
+Paths accept `~`, `%VARIABLE%` and `${VARIABLE}`. The game name becomes the folder name in the cloud.
 
-**3. Vê o que ia acontecer, e depois sincroniza:**
+**3. See what would happen, then sync:**
 
 ```bash
-cairnfire status               # só mostra, não altera nada
-cairnfire sync                 # sincroniza todos os jogos
+cairnfire status               # only shows, changes nothing
+cairnfire sync                 # syncs every game
 cairnfire sync "Stardew Valley" --dry-run
 ```
 
-Exemplo de saída:
+Example output:
 
 ```
-[Stardew Valley] feito:
+[Stardew Valley] done:
     local  -> cloud  Farm_123456/Farm_123456
- !  cloud  -> local  Farm_123456/SaveGameInfo  (alterado nos dois lados; a cloud é mais recente)
-    (versões substituídas ou apagadas ficam em ~/.cairnfire/backups/Stardew Valley)
+ !  cloud  -> local  Farm_123456/SaveGameInfo  (changed on both sides; cloud is newer)
+    (replaced or deleted versions are kept in ~/.cairnfire/backups/Stardew Valley)
 ```
 
-As linhas marcadas com `!` são conflitos: o mais recente ganhou e a outra versão está no backup.
+Lines marked with `!` are conflicts: the newest won and the other version is in the backup.
 
-## Todos os comandos
+## All commands
 
-| Comando | O que faz |
+| Command | What it does |
 |---|---|
-| `init --sync-root <pasta>` | Define a pasta da cloud nesta máquina |
-| `add <jogo> --windows <pasta> --mac <pasta>` | Regista um jogo (ou atualiza os caminhos de um já registado) |
-| `list` | Lista os jogos registados |
-| `status [jogo]` | Mostra o que seria copiado, sem alterar nada |
-| `sync [jogo] [--dry-run]` | Sincroniza (um jogo ou todos) |
-| `watch [--interval 60] [--debounce 5]` | Fica a correr e sincroniza sozinho |
-| `gui` | Abre a janela |
-| `autostart install` / `uninstall` / `status` | Faz o `watch` arrancar no login |
+| `init --sync-root <folder>` | Sets the cloud folder on this machine |
+| `add <game> --windows <folder> --mac <folder>` | Registers a game (or updates the paths of one already registered) |
+| `list` | Lists the registered games |
+| `status [game]` | Shows what would be copied, changes nothing |
+| `sync [game] [--dry-run]` | Syncs (one game or all of them) |
+| `watch [--interval 60] [--debounce 5]` | Keeps running and syncs by itself |
+| `gui` | Opens the window |
+| `autostart install` / `uninstall` / `status` | Makes `watch` start at login |
 
-## Modo automático
+## Automatic mode
 
-Em vez de correres `sync` à mão, deixa o `watch` a correr:
+Instead of running `sync` by hand, leave `watch` running:
 
 ```bash
 cairnfire watch
 ```
 
-Sincroniza ao arrancar e depois sempre que:
+It syncs on startup and then again whenever:
 
-- algo muda na pasta dos saves ou na pasta do jogo na cloud, depois de `--debounce` segundos sem mais alterações
-  (para não copiar um save enquanto o jogo ainda o está a escrever);
-- passam `--interval` segundos, mesmo sem eventos. Isto é necessário porque os clientes de cloud nem sempre
-  geram eventos de ficheiros, e no macOS o Java só verifica alterações de ~10 em ~10 segundos.
+- something changes in the saves folder or in the game's folder in the cloud, after `--debounce` seconds without
+  further changes (so a save is not copied while the game is still writing it);
+- `--interval` seconds pass, even without events. This is needed because cloud clients do not always generate
+  file events, and on macOS Java only checks for changes every ~10 seconds.
 
-Só escreve no ecrã quando há ficheiros para copiar, e se a cloud não estiver montada tenta outra vez no ciclo
-seguinte.
+It only prints something when there are files to copy, and if the cloud is not mounted it tries again on the next
+cycle.
 
-### Arrancar sozinho no login
+### Start automatically at login
 
 ```bash
 cairnfire autostart install
@@ -198,90 +197,99 @@ cairnfire autostart status
 cairnfire autostart uninstall
 ```
 
-- **macOS:** cria um agente em `~/Library/LaunchAgents/com.cairnfire.watch.plist` (launchd). Arranca no login e
-  reinicia se falhar.
-- **Windows:** põe um atalho `cairnfire-watch.vbs` na pasta Arranque, que corre o `watch` sem janela.
+- **macOS:** creates an agent at `~/Library/LaunchAgents/com.cairnfire.watch.plist` (launchd). It starts at login
+  and restarts if it fails.
+- **Windows:** puts a `cairnfire-watch.vbs` shortcut in the Startup folder, which runs `watch` without a window.
 
-O log fica em `~/.cairnfire/watch.log`. O arranque guarda o caminho do executável e do Java usados no `install`,
-por isso, se mudares a app de pasta, volta a correr `autostart install`.
+The log is at `~/.cairnfire/watch.log`. Autostart stores the path of the executable and the Java used at
+`install` time, so if you move the app to another folder, run `autostart install` again.
 
-## Onde ficam os ficheiros do Cairnfire
+## Where Cairnfire keeps its files
 
-Tudo fica em `~/.cairnfire/` (ou na pasta indicada pela variável `CAIRNFIRE_HOME`):
+Everything lives in `~/.cairnfire/` (or in the folder named by the `CAIRNFIRE_HOME` variable):
 
 ```
 ~/.cairnfire/
-├── config.json        pasta da cloud e jogos registados
-├── state/<jogo>.json  "fotografia" da última sincronização (hashes)
-├── backups/<jogo>/    versões substituídas ou apagadas
-└── watch.log          log do modo automático
+├── config.json        cloud folder and registered games
+├── state/<game>.json  "snapshot" of the last sync (hashes)
+├── backups/<game>/    replaced or deleted versions
+└── watch.log          log of the automatic mode
 ```
 
-## Como está organizado o código
+## How the code is organised
 
 ```
-assets/                      logo, banner, ícones e captura de ecrã (os logos vêm de assets/make_logo.py)
+assets/                      logo, banners, app icons and screenshot (plain image files)
 src/main/kotlin/cairnfire/
-├── Main.kt        comandos da linha de comandos (Clikt)
-├── Sync.kt        sincronizar um jogo (partilhado pela CLI e pela janela)
-├── SyncEngine.kt  o cérebro: decide o que copiar (merge a 3 vias), faz backups, calcula o novo estado
-├── Files.kt       hashes SHA-256, listagem de pastas, expansão de caminhos, cópia segura
-├── Config.kt      leitura e escrita da configuração e do estado em JSON
-├── Watch.kt       vigia pastas com o WatchService do Java
-├── Autostart.kt   arranque automático (launchd no macOS, pasta Arranque no Windows)
-└── gui/           a janela (Compose Desktop): tema, componentes pixel, ecrãs e estado
-src/test/kotlin/cairnfire/   testes automáticos
+├── Main.kt        command-line commands (Clikt)
+├── Sync.kt        syncing one game (shared by the CLI and the window)
+├── SyncEngine.kt  the brain: decides what to copy (3-way merge), makes backups, computes the new state
+├── Files.kt       SHA-256 hashes, folder listing, path expansion, safe copy
+├── Config.kt      reading and writing the configuration and state as JSON
+├── Watch.kt       watches folders with Java's WatchService
+├── Autostart.kt   autostart (launchd on macOS, Startup folder on Windows)
+└── gui/           the window (Compose Desktop): theme, pixel components, screens and state
+src/test/kotlin/cairnfire/   automated tests
 ```
 
-Tecnologias: Kotlin/JVM, [Gradle](https://gradle.org/), [Clikt](https://ajalt.github.io/clikt/) (linha de comandos),
+Technologies: Kotlin/JVM, [Gradle](https://gradle.org/), [Clikt](https://ajalt.github.io/clikt/) (command line),
 [kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization) (JSON),
-[Compose Multiplatform](https://www.jetbrains.com/compose-multiplatform/) (a janela).
+[Compose Multiplatform](https://www.jetbrains.com/compose-multiplatform/) (the window).
 
-## Testes
+## Tests
 
 ```bash
 ./gradlew test
 ```
 
-Cobrem o motor de sincronização (enviar, trazer, conflitos, apagados, `--dry-run`), o vigia de pastas e a
-geração dos ficheiros de arranque automático. Os testes do vigia podem demorar uns segundos no macOS.
+They cover the sync engine (push, pull, conflicts, deletions, `--dry-run`), the folder watcher, the generation of
+the autostart files and the window's state logic. The watcher tests can take a few seconds on macOS.
 
-## Estado do projeto e limitações
+## Project status and limitations
 
-O Cairnfire está em desenvolvimento e é um projeto de estudo. Convém saber que:
+Cairnfire is under development and is a study project. Worth knowing:
 
-- **Foi testado no macOS.** O código para Windows (caminhos, `jpackage` e arranque automático) existe, mas ainda
-  não foi corrido num Windows real.
-- **Os conflitos resolvem-se pela data de modificação.** Se os relógios dos computadores estiverem desalinhados,
-  o "mais recente" pode não ser o certo. É para isso que existem os backups.
-- **Depende do teu cliente de cloud.** Se o Drive/Dropbox ainda não descarregou o save mais recente, o
-  Cairnfire só vê a versão antiga. Espera que a cloud acabe de sincronizar antes de abrires o jogo no outro lado.
-- **A janela é nova e simples:** foi testada no macOS (e só o arranque e o desenho, não todos os cliques). O
-  arranque automático não funciona em Linux.
-- Faz sempre uma cópia dos teus saves antes de o experimentares pela primeira vez com um jogo importante.
+- **It has been tested on macOS.** The Windows code (paths, `jpackage` and autostart) exists but has not been run
+  on a real Windows machine yet.
+- **Conflicts are resolved by modification time.** If the computers' clocks are out of sync, the "newest" may not
+  be the right one. That is what the backups are for.
+- **It depends on your cloud client.** If Drive/Dropbox has not downloaded the latest save yet, Cairnfire only
+  sees the old version. Wait for the cloud to finish syncing before opening the game on the other side.
+- **The window is new and simple:** it was tested on macOS (only startup and rendering, not every click). Autostart
+  does not work on Linux.
+- Always make a copy of your saves before trying it for the first time on an important game.
 
-## Ideias para o futuro
+## Ideas for the future
 
-- Instalador (`.dmg` / `.msi`) e assinatura da app
-- Mais da janela: resolver conflitos escolhendo a versão, ver e restaurar backups
-- Deteção de relógios desalinhados e avisos mais claros nos conflitos
-- Arranque automático no Linux (systemd)
+- Installer (`.dmg` / `.msi`) and app signing
+- More from the window: resolve conflicts by picking a version, browse and restore backups
+- Detecting out-of-sync clocks and clearer warnings on conflicts
+- Autostart on Linux (systemd)
 
 ## Logo
 
-O símbolo é um *cairn* (aquelas pilhas de pedras que marcam um caminho) com a pedra do topo a arder: a chama
-ilumina as pedras e o título. Está desenhado em pixel art e é gerado por código, em
-[`assets/make_logo.py`](assets/make_logo.py) (`python3 assets/make_logo.py`, precisa de Pillow), que produz
-o banner, o logo em PNG/SVG, o banner da janela e os ícones da app (`icon.icns` para macOS e `icon.ico` para Windows).
+The symbol is a *cairn* (those piles of stones that mark a trail) with the top stone on fire: the flame lights up
+the stones and the title. It is drawn in pixel art, and all the images live in [`assets/`](assets/) as plain files:
 
-## Contribuir
+| File | What it is |
+|---|---|
+| `banner.png` | The banner at the top of this README |
+| `logo.png` | The symbol on its own (512×512) |
+| `banner-ui.png` | The banner shown inside the app window (with room for the glow to fade out) |
+| `icon-1024.png` | The master app icon (1024×1024, rounded square) |
+| `icon.icns` / `icon.ico` | The app icons for macOS and Windows, used by `jpackage` |
+| `screenshot.png` | The screenshot shown in this README |
 
-Sugestões e *issues* são bem-vindas. Antes de abrir um *pull request*, corre `./gradlew test`.
+The images are PNG on purpose: pixel art stays sharp in PNG, while JPG would blur the edges of every pixel.
 
-## Autor
+## Contributing
 
-**Gonçalo Gatinho**, estudante de LEIC.
+Suggestions and issues are welcome. Before opening a pull request, run `./gradlew test`.
 
-## Licença
+## Author
 
-Distribuído sob a licença MIT. Vê o ficheiro [LICENSE](LICENSE).
+**Gonçalo Gatinho**, computer science and engineering student (LEIC).
+
+## License
+
+Distributed under the MIT license. See the [LICENSE](LICENSE) file.

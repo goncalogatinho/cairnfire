@@ -28,14 +28,14 @@ enum class Platform(val key: String) {
     }
 }
 
-/** Um jogo e a pasta dos saves em cada sistema operativo. */
+/** A game and the saves folder on each operating system. */
 @Serializable
 data class GameConfig(val name: String, val paths: Map<String, String>)
 
 @Serializable
 data class Config(val syncRoot: String, val games: List<GameConfig> = emptyList())
 
-/** Estado da última sincronização deste dispositivo: caminho relativo -> hash. */
+/** State of this device's last sync: relative path -> hash. */
 @Serializable
 data class GameState(val files: Map<String, String> = emptyMap())
 
@@ -43,15 +43,15 @@ private val GAME_NAME = Regex("[A-Za-z0-9._ -]+")
 
 fun validateGameName(name: String) {
     if (!GAME_NAME.matches(name) || name.startsWith(".")) {
-        throw CliktError("Nome de jogo inválido: '$name'. Usa letras, números, espaços, '.', '_' ou '-'.")
+        throw CliktError("Invalid game name: '$name'. Use letters, numbers, spaces, '.', '_' or '-'.")
     }
 }
 
 /**
- * Tudo fica em ~/.cairnfire (ou em $CAIRNFIRE_HOME):
- *   config.json        jogos e pasta de sincronização
- *   state/<jogo>.json  hashes da última sincronização (base do merge a 3 vias)
- *   backups/<jogo>/    cópias de tudo o que foi sobrescrito ou apagado
+ * Everything lives in ~/.cairnfire (or in $CAIRNFIRE_HOME):
+ *   config.json        games and sync folder
+ *   state/<game>.json  hashes from the last sync (the base of the 3-way merge)
+ *   backups/<game>/    copies of everything that was overwritten or deleted
  */
 object ConfigStore {
     private val json = Json { prettyPrint = true; ignoreUnknownKeys = true }
@@ -68,7 +68,7 @@ object ConfigStore {
         if (configFile.exists()) json.decodeFromString(Config.serializer(), configFile.readText()) else null
 
     fun load(): Config = loadOrNull()
-        ?: throw CliktError("Ainda não há configuração. Corre primeiro: cairnfire init --sync-root <pasta>")
+        ?: throw CliktError("Nothing is configured yet. Run first: cairnfire init --sync-root <folder>")
 
     fun save(config: Config) {
         home.createDirectories()
@@ -80,7 +80,7 @@ object ConfigStore {
         return if (f.exists()) json.decodeFromString(GameState.serializer(), f.readText()).files else emptyMap()
     }
 
-    /** Esquece a última sincronização de um jogo (ao removê-lo), para não herdar uma "base" velha se voltar. */
+    /** Forgets a game's last sync (when removing it), so a re-added game does not inherit a stale "base". */
     fun deleteState(game: String) {
         stateFile(game).deleteIfExists()
     }

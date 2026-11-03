@@ -10,7 +10,7 @@ import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-// No macOS o WatchService do JDK verifica a cada ~10s, por isso os timeouts são generosos.
+// On macOS the JDK WatchService polls every ~10s, so the timeouts are generous.
 class ChangeWatcherTest {
     private lateinit var dir: Path
 
@@ -25,7 +25,7 @@ class ChangeWatcherTest {
     }
 
     @Test
-    fun `sem alteracoes o await acaba por timeout`() {
+    fun `with no changes the await times out`() {
         ChangeWatcher().use { w ->
             w.watch(dir)
             assertFalse(w.awaitChange(300))
@@ -33,7 +33,7 @@ class ChangeWatcherTest {
     }
 
     @Test
-    fun `detecta um ficheiro novo`() {
+    fun `detects a new file`() {
         ChangeWatcher().use { w ->
             w.watch(dir)
             (dir / "a.sav").writeText("1")
@@ -42,7 +42,7 @@ class ChangeWatcherTest {
     }
 
     @Test
-    fun `detecta alteracoes em subpastas`() {
+    fun `detects changes in subfolders`() {
         val sub = (dir / "slot1").createDirectories()
         ChangeWatcher().use { w ->
             w.watch(dir)
@@ -52,9 +52,9 @@ class ChangeWatcherTest {
     }
 
     @Test
-    fun `pasta que nao existe e ignorada`() {
+    fun `a folder that does not exist is ignored`() {
         ChangeWatcher().use { w ->
-            w.watch(dir / "nao-existe")
+            w.watch(dir / "does-not-exist")
             assertFalse(w.awaitChange(100))
         }
     }

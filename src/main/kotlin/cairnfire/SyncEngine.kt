@@ -13,8 +13,8 @@ import kotlin.io.path.exists
 enum class Kind(val label: String) {
     PUSH("local  -> cloud"),
     PULL("cloud  -> local"),
-    DELETE_REMOTE("apagar na cloud"),
-    DELETE_LOCAL("apagar local")
+    DELETE_REMOTE("delete in cloud"),
+    DELETE_LOCAL("delete local")
 }
 
 data class Action(val kind: Kind, val path: String, val conflict: Boolean = false, val note: String? = null)
@@ -22,13 +22,13 @@ data class Action(val kind: Kind, val path: String, val conflict: Boolean = fals
 data class SyncResult(val actions: List<Action>, val newBase: Map<String, String>)
 
 /**
- * Merge a 3 vias entre a pasta local, a pasta na cloud e a "base" (o que ficou da última sincronização).
+ * 3-way merge between the local folder, the cloud folder and the "base" (what was left by the last sync).
  *
- *   só o local mudou    -> PUSH
- *   só a cloud mudou    -> PULL
- *   os dois mudaram     -> conflito: ganha o mais recente (data de modificação) e o outro vai para backup
+ *   only local changed  -> PUSH
+ *   only cloud changed  -> PULL
+ *   both changed        -> conflict: the most recent (modification time) wins and the other goes to backup
  *
- * Nada é sobrescrito ou apagado sem antes ficar guardado em [backupRoot].
+ * Nothing is overwritten or deleted without first being saved in [backupRoot].
  */
 class SyncEngine(
     private val backupRoot: Path,
@@ -48,29 +48,29 @@ class SyncEngine(
             val l = local[path]
             val r = remote[path]
             val b = base[path]
-            if (l?.hash == r?.hash) continue // iguais (ou ausentes dos dois lados)
+            if (l?.hash == r?.hash) continue // identical (or absent on both sides)
 
             val action = if (l != null && r != null) {
                 when {
                     b == r.hash -> Action(Kind.PUSH, path)
                     b == l.hash -> Action(Kind.PULL, path)
                     l.mtimeMillis > r.mtimeMillis ->
-                        Action(Kind.PUSH, path, conflict = true, note = "alterado nos dois lados; o local é mais recente")
+                        Action(Kind.PUSH, path, conflict = true, note = "changed on both sides; local is newer")
                     else ->
-                        Action(Kind.PULL, path, conflict = true, note = "alterado nos dois lados; a cloud é mais recente")
+                        Action(Kind.PULL, path, conflict = true, note = "changed on both sides; cloud is newer")
                 }
             } else if (l != null) {
                 when (b) {
                     null -> Action(Kind.PUSH, path)
-                    l.hash -> Action(Kind.DELETE_LOCAL, path, note = "apagado noutra máquina")
-                    else -> Action(Kind.PUSH, path, conflict = true, note = "alterado aqui mas apagado na cloud; mantém-se")
+                    l.hash -> Action(Kind.DELETE_LOCAL, path, note = "deleted on another machine")
+                    else -> Action(Kind.PUSH, path, conflict = true, note = "changed here but deleted in the cloud; kept")
                 }
             } else {
                 val remoteInfo = checkNotNull(r)
                 when (b) {
                     null -> Action(Kind.PULL, path)
-                    remoteInfo.hash -> Action(Kind.DELETE_REMOTE, path, note = "apagado nesta máquina")
-                    else -> Action(Kind.PULL, path, conflict = true, note = "apagado aqui mas alterado na cloud; mantém-se")
+                    remoteInfo.hash -> Action(Kind.DELETE_REMOTE, path, note = "deleted on this machine")
+                    else -> Action(Kind.PULL, path, conflict = true, note = "deleted here but changed in the cloud; kept")
                 }
             }
             actions += action
@@ -106,7 +106,7 @@ class SyncEngine(
         }
     }
 
-    /** O novo estado base: o hash de cada ficheiro depois de aplicadas as ações. */
+    /** The new base state: the hash of each file after the actions were applied. */
     fun nextBase(local: Map<String, FileInfo>, remote: Map<String, FileInfo>, actions: List<Action>): Map<String, String> {
         val byPath = actions.associateBy { it.path }
         val result = sortedMapOf<String, String>()

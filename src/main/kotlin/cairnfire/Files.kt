@@ -16,7 +16,7 @@ data class FileInfo(val hash: String, val mtimeMillis: Long)
 const val TMP_SUFFIX = ".cairnfire-tmp"
 private val IGNORED_NAMES = setOf(".DS_Store", "Thumbs.db", "desktop.ini")
 
-/** Expande "~", "%VAR%" e "${VAR}" e devolve um caminho absoluto. */
+/** Expands "~", "%VAR%" and "${VAR}" and returns an absolute path. */
 fun expandPath(raw: String): Path {
     var s = raw.trim()
     if (s == "~" || s.startsWith("~/") || s.startsWith("~\\")) {
@@ -42,7 +42,7 @@ fun Path.sha256(): String {
     return digest.digest().joinToString("") { "%02x".format(it) }
 }
 
-/** Lista todos os ficheiros de [root] (caminho relativo com '/') com hash e data de modificação. */
+/** Lists every file under [root] (relative path with '/') with its hash and modification time. */
 fun scan(root: Path): Map<String, FileInfo> {
     if (!root.isDirectory()) return emptyMap()
     val result = sortedMapOf<String, FileInfo>()
@@ -57,7 +57,7 @@ fun scan(root: Path): Map<String, FileInfo> {
     return result
 }
 
-/** Copia para um ficheiro temporário e só depois substitui o destino, para nunca deixar um save a meio. */
+/** Copies to a temporary file and only then replaces the destination, so a save is never left half-written. */
 fun safeCopy(src: Path, dst: Path) {
     dst.parent.createDirectories()
     val tmp = dst.resolveSibling(dst.fileName.toString() + TMP_SUFFIX)

@@ -10,7 +10,7 @@ import kotlin.io.path.div
 import kotlin.io.path.exists
 import kotlin.io.path.writeText
 
-/** O que o arranque automático precisa de saber para lançar `cairnfire watch`. */
+/** What autostart needs to know to launch `cairnfire watch`. */
 data class AutostartSpec(
     val launcher: Path,
     val javaHome: Path,
@@ -19,16 +19,17 @@ data class AutostartSpec(
 )
 
 /**
- * Arranque automático do `watch` no login:
- *   macOS    ~/Library/LaunchAgents/com.cairnfire.watch.plist (launchd; reinicia se falhar)
- *   Windows  um .vbs na pasta Arranque (corre o watch.cmd sem janela)
+ * Autostart of `watch` at login:
+ *   macOS    ~/Library/LaunchAgents/com.cairnfire.watch.plist (launchd; restarts if it fails)
+ *   Windows  a .vbs in the Startup folder (runs watch.cmd without a window)
  */
 object Autostart {
     const val LABEL = "com.cairnfire.watch"
 
     /**
-     * O executável que lança esta instalação: na app do `jpackage` é o próprio launcher (que o jpackage indica
-     * em `jpackage.app-path`); na versão do `installDist` é o script `bin/cairnfire`, a partir do local do jar.
+     * The executable that launches this installation: in the `jpackage` app it is the launcher itself (which
+     * jpackage reports in `jpackage.app-path`); in the `installDist` version it is the `bin/cairnfire` script,
+     * found from the jar's location.
      */
     fun launcher(platform: Platform): Path {
         System.getProperty("jpackage.app-path")?.let { return Path.of(it).toAbsolutePath().normalize() }
@@ -36,14 +37,14 @@ object Autostart {
         val name = if (platform == Platform.WINDOWS) "cairnfire.bat" else "cairnfire"
         val script = jar.parent?.parent?.resolve("bin")?.resolve(name)
         if (script == null || !script.exists()) {
-            throw CliktError("Não encontrei o executável instalado. Corre primeiro: ./gradlew installDist (ou jpackage)")
+            throw CliktError("Could not find the installed executable. Run first: ./gradlew installDist (or jpackage)")
         }
         return script.toAbsolutePath().normalize()
     }
 
     fun spec(platform: Platform) = AutostartSpec(
         launcher = launcher(platform),
-        // O launchd e o Windows no login não têm o teu shell: fixamos o JDK com que instalaste.
+        // launchd and Windows at login do not have your shell: we pin the JDK you installed with.
         javaHome = Path.of(System.getProperty("java.home")),
         cairnfireHome = System.getenv("CAIRNFIRE_HOME")?.let { Path.of(it).toAbsolutePath() },
         logFile = ConfigStore.home / "watch.log",
@@ -86,7 +87,7 @@ object Autostart {
         append("\"${s.launcher}\" watch >> \"${s.logFile}\" 2>&1\r\n")
     }
 
-    /** Corre o .cmd com a janela escondida (0) e sem esperar (False). */
+    /** Runs the .cmd with the window hidden (0) and without waiting (False). */
     fun windowsVbs(cmd: Path): String =
         "CreateObject(\"WScript.Shell\").Run \"\"\"$cmd\"\"\", 0, False\r\n"
 
@@ -96,7 +97,7 @@ object Autostart {
     private val windowsCmdFile: Path get() = ConfigStore.home / "watch.cmd"
     private val windowsVbsFile: Path
         get() = Path.of(
-            System.getenv("APPDATA") ?: throw CliktError("A variável APPDATA não está definida."),
+            System.getenv("APPDATA") ?: throw CliktError("The APPDATA variable is not set."),
             "Microsoft", "Windows", "Start Menu", "Programs", "Startup", "cairnfire-watch.vbs",
         )
 
@@ -107,18 +108,18 @@ object Autostart {
                 ConfigStore.home.createDirectories()
                 macAgent.parent.createDirectories()
                 macAgent.writeText(macPlist(s))
-                run("launchctl", "bootout", macTarget()) // se já estava instalado; falhar aqui é normal
+                run("launchctl", "bootout", macTarget()) // in case it was already installed; failing here is normal
                 val (code, out) = run("launchctl", "bootstrap", macDomain(), macAgent.toString())
-                if (code != 0) throw CliktError("O launchctl falhou ($code): $out")
-                return "Instalado em $macAgent e já a correr. Log: ${s.logFile}"
+                if (code != 0) throw CliktError("launchctl failed ($code): $out")
+                return "Installed at $macAgent and already running. Log: ${s.logFile}"
             }
             Platform.WINDOWS -> {
                 val s = spec(platform)
                 ConfigStore.home.createDirectories()
                 windowsCmdFile.writeText(windowsCmd(s))
                 windowsVbsFile.writeText(windowsVbs(windowsCmdFile))
-                ProcessBuilder("wscript.exe", windowsVbsFile.toString()).start() // arranca já, sem esperar pelo login
-                return "Instalado em $windowsVbsFile e já a correr. Log: ${s.logFile}"
+                ProcessBuilder("wscript.exe", windowsVbsFile.toString()).start() // start now, without waiting for the next login
+                return "Installed at $windowsVbsFile and already running. Log: ${s.logFile}"
             }
             Platform.LINUX -> throw unsupported()
         }
@@ -129,14 +130,14 @@ object Autostart {
             Platform.MAC -> {
                 run("launchctl", "bootout", macTarget())
                 val removed = macAgent.deleteIfExists()
-                return if (removed) "Removido $macAgent" else "O arranque automático não estava instalado."
+                return if (removed) "Removed $macAgent" else "Autostart was not installed."
             }
             Platform.WINDOWS -> {
-                // O processo que já está a correr continua até fechar a sessão ou ser terminado no Gestor de Tarefas.
+                // The process that is already running continues until you log out or end it in Task Manager.
                 val removed = windowsVbsFile.deleteIfExists()
                 windowsCmdFile.deleteIfExists()
-                return if (removed) "Removido $windowsVbsFile (o watch atual pára no próximo logout)"
-                else "O arranque automático não estava instalado."
+                return if (removed) "Removed $windowsVbsFile (the current watch stops at the next logout)"
+                else "Autostart was not installed."
             }
             Platform.LINUX -> throw unsupported()
         }
@@ -144,16 +145,16 @@ object Autostart {
 
     fun status(platform: Platform): String = when (platform) {
         Platform.MAC -> when {
-            !macAgent.exists() -> "Não instalado."
-            run("launchctl", "print", macTarget()).first == 0 -> "Instalado e carregado no launchd ($macAgent)."
-            else -> "Instalado ($macAgent), mas não carregado. Corre: cairnfire autostart install"
+            !macAgent.exists() -> "Not installed."
+            run("launchctl", "print", macTarget()).first == 0 -> "Installed and loaded in launchd ($macAgent)."
+            else -> "Installed ($macAgent), but not loaded. Run: cairnfire autostart install"
         }
         Platform.WINDOWS ->
-            if (windowsVbsFile.exists()) "Instalado ($windowsVbsFile)." else "Não instalado."
+            if (windowsVbsFile.exists()) "Installed ($windowsVbsFile)." else "Not installed."
         Platform.LINUX -> throw unsupported()
     }
 
-    private fun unsupported() = CliktError("O arranque automático só está implementado para macOS e Windows.")
+    private fun unsupported() = CliktError("Autostart is only implemented for macOS and Windows.")
 
     private fun macDomain() = "gui/${run("id", "-u").second.trim()}"
     private fun macTarget() = "${macDomain()}/$LABEL"
@@ -166,25 +167,25 @@ object Autostart {
 }
 
 class AutostartCmd : CliktCommand(name = "autostart") {
-    override fun help(context: Context) = "Faz o 'watch' arrancar sozinho quando inicias sessão (macOS e Windows)."
+    override fun help(context: Context) = "Makes 'watch' start by itself when you log in (macOS and Windows)."
 
     override fun run() = Unit
 }
 
 class AutostartInstallCmd : CliktCommand(name = "install") {
-    override fun help(context: Context) = "Instala o arranque automático e põe o watch a correr já."
+    override fun help(context: Context) = "Installs autostart and starts watch right away."
 
     override fun run() = echo(Autostart.install(Platform.current()))
 }
 
 class AutostartUninstallCmd : CliktCommand(name = "uninstall") {
-    override fun help(context: Context) = "Remove o arranque automático."
+    override fun help(context: Context) = "Removes autostart."
 
     override fun run() = echo(Autostart.uninstall(Platform.current()))
 }
 
 class AutostartStatusCmd : CliktCommand(name = "status") {
-    override fun help(context: Context) = "Mostra se o arranque automático está instalado."
+    override fun help(context: Context) = "Shows whether autostart is installed."
 
     override fun run() = echo(Autostart.status(Platform.current()))
 }

@@ -6,23 +6,23 @@ import kotlin.io.path.exists
 import kotlin.io.path.isDirectory
 
 /**
- * O resultado de sincronizar (ou só planear) um jogo. [skipped] explica porque é que o jogo foi saltado
- * sem tocar em nada; nesse caso [actions] está vazio.
+ * The result of syncing (or just planning) a game. [skipped] explains why the game was skipped
+ * without touching anything; in that case [actions] is empty.
  */
 data class GameReport(val game: String, val actions: List<Action> = emptyList(), val skipped: String? = null)
 
-/** A pasta da cloud tem de existir (senão o disco pode não estar montado); caso contrário não se mexe em nada. */
+/** The cloud folder must exist (otherwise the drive may not be mounted); if it does not, nothing is touched. */
 fun requireSyncRoot(config: Config): Path {
     val syncRoot = Path.of(config.syncRoot)
     if (!syncRoot.isDirectory()) {
-        throw CliktError("A pasta de sincronização '$syncRoot' não existe (a cloud está montada?). Nada foi alterado.")
+        throw CliktError("The sync folder '$syncRoot' does not exist (is the cloud mounted?). Nothing was changed.")
     }
     return syncRoot
 }
 
 /**
- * Sincroniza um jogo entre esta máquina e a cloud (ou, com [dryRun], só calcula o que faria).
- * É usado tanto pela linha de comandos como pela interface gráfica.
+ * Syncs a game between this machine and the cloud (or, with [dryRun], only works out what it would do).
+ * Used by both the command line and the window.
  */
 fun syncGame(
     config: Config,
@@ -32,18 +32,18 @@ fun syncGame(
     platform: Platform = Platform.current(),
 ): GameReport {
     val rawLocal = game.paths[platform.key]
-        ?: return GameReport(game.name, skipped = "sem caminho configurado para ${platform.key}; ignorado.")
+        ?: return GameReport(game.name, skipped = "no path configured for ${platform.key}; skipped.")
     val localDir = expandPath(rawLocal)
     val remoteDir = Path.of(config.syncRoot).resolve(game.name)
     val base = ConfigStore.loadState(game.name)
 
-    // Proteção: se uma das pastas desapareceu mas já sincronizámos antes, isto parece um erro
-    // (caminho errado, disco desmontado) e não uma decisão de apagar tudo.
+    // Safety: if one of the folders disappeared but we have synced before, this looks like a mistake
+    // (wrong path, unmounted drive) and not a decision to delete everything.
     if (base.isNotEmpty() && !localDir.exists()) {
-        return GameReport(game.name, skipped = "a pasta local '$localDir' não existe; ignorado para não apagar nada na cloud.")
+        return GameReport(game.name, skipped = "the local folder '$localDir' does not exist; skipped so nothing is deleted in the cloud.")
     }
     if (base.isNotEmpty() && !remoteDir.exists()) {
-        return GameReport(game.name, skipped = "a pasta '$remoteDir' desapareceu da cloud; ignorado para não apagar nada local.")
+        return GameReport(game.name, skipped = "the folder '$remoteDir' disappeared from the cloud; skipped so nothing is deleted locally.")
     }
 
     val result = engine.sync(game.name, localDir, remoteDir, base, dryRun)

@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** Texto monoespaçado: simples, neutro e combina com o pixel art. */
+/** Monospaced text: simple, neutral and fits the pixel art. */
 @Composable
 fun PxText(
     text: String,
@@ -60,16 +60,16 @@ fun PxText(
     )
 }
 
-/** Etiqueta de secção: pequena, em maiúsculas e espaçada. */
+/** Section label: small, uppercase and letter-spaced. */
 @Composable
 fun Label(text: String, modifier: Modifier = Modifier) =
     PxText(text.uppercase(), modifier, color = Px.Muted, size = 10.sp, bold = true, spacing = 1.6.sp)
 
-/** Caixa de cantos retos com borda de 2 dp, como um "pixel" ampliado. */
+/** Square-cornered box with a 2 dp border, like an enlarged "pixel". */
 fun Modifier.panel(border: Color = Px.Border, fill: Color = Px.Panel): Modifier =
     this.background(fill).border(2.dp, border)
 
-/** Botão chunky: cantos retos, borda de 2 dp e uma "sombra" de 2 dp por baixo que desaparece ao carregar. */
+/** Chunky button: square corners, 2 dp border and a 2 dp "shadow" underneath that disappears when pressed. */
 @Composable
 fun PixelButton(
     text: String,
@@ -119,7 +119,7 @@ fun PixelButton(
     }
 }
 
-/** Interruptor quadrado: o quadrado acende a laranja quando está ligado. */
+/** Square switch: the square lights up orange when on. */
 @Composable
 fun PixelToggle(checked: Boolean, label: String, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
     val source = remember { MutableInteractionSource() }
@@ -144,7 +144,7 @@ fun PixelToggle(checked: Boolean, label: String, onChange: (Boolean) -> Unit, mo
     }
 }
 
-/** Campo de texto de uma linha com a mesma borda; fica laranja com o foco. */
+/** Single-line text field with the same border; turns orange when focused. */
 @Composable
 fun PixelField(
     value: String,
@@ -179,7 +179,7 @@ fun PixelField(
     )
 }
 
-/** Quadradinho de estado (8 dp). */
+/** Small status square. */
 @Composable
 fun StatusSquare(color: Color, modifier: Modifier = Modifier) =
     Box(modifier.size(10.dp).background(color))

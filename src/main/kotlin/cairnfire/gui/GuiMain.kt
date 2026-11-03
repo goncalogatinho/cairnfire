@@ -25,7 +25,7 @@ import kotlin.io.path.writeBytes
 const val WINDOW_WIDTH = 780
 const val WINDOW_HEIGHT = 680
 
-/** Abre a janela do Cairnfire. */
+/** Opens the Cairnfire window. */
 fun launchGui() = application {
     val scope = rememberCoroutineScope()
     val state = remember { AppState(scope).also { it.load() } }
@@ -42,7 +42,7 @@ fun launchGui() = application {
     }
 }
 
-/** Desenha a janela com dados de exemplo para um PNG (para a documentação). Não precisa de ecrã. */
+/** Renders the window with sample data to a PNG (for the documentation). Needs no screen. */
 @OptIn(ExperimentalComposeUiApi::class)
 fun renderPreview(out: Path, variant: String = "list", scale: Float = 2f) {
     val state = AppState.demo(kotlinx.coroutines.CoroutineScope(Dispatchers.Unconfined), variant)
@@ -53,14 +53,14 @@ fun renderPreview(out: Path, variant: String = "list", scale: Float = 2f) {
     ) { App(state) }
     try {
         scene.render()
-        val png = scene.render(16_000_000L).encodeToData(EncodedImageFormat.PNG) ?: error("não consegui codificar o PNG")
+        val png = scene.render(16_000_000L).encodeToData(EncodedImageFormat.PNG) ?: error("could not encode the PNG")
         out.writeBytes(png.bytes)
     } finally {
         scene.close()
     }
 }
 
-/** Escolhe uma pasta. No macOS usa o diálogo nativo; nos outros sistemas, o do Swing. */
+/** Picks a folder. On macOS it uses the native dialog; on other systems, the Swing one. */
 fun pickFolder(title: String): String? {
     if (System.getProperty("os.name").lowercase().contains("mac")) {
         System.setProperty("apple.awt.fileDialogForDirectories", "true")

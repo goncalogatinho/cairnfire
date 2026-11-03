@@ -15,7 +15,7 @@ dependencies {
     implementation("com.github.ajalt.clikt:clikt:5.0.3")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
-    // Interface gráfica (Compose Multiplatform Desktop)
+    // Graphical interface (Compose Multiplatform Desktop)
     implementation(compose.desktop.currentOs)
     implementation(compose.foundation)
 
@@ -24,9 +24,11 @@ dependencies {
 
 application {
     mainClass.set("cairnfire.MainKt")
+    // Newer JDKs warn on every run about JNA (used by the terminal detection) calling native code.
+    applicationDefaultJvmArgs = listOf("--enable-native-access=ALL-UNNAMED")
 }
 
-// O banner e o logo (gerados em assets/) vão dentro do jar para a interface os mostrar.
+// The banner and logo (generated in assets/) go inside the jar so the window can show them.
 tasks.processResources {
     from("assets") {
         include("banner-ui.png", "logo.png")
@@ -38,11 +40,11 @@ tasks.test {
     useJUnitPlatform()
 }
 
-// Gera uma app com o runtime Java incluído (não precisa de JRE instalado). O jpackage não faz
-// cross-compile: corre isto no Mac para a versão Mac e no Windows para a versão Windows.
+// Builds an app with the Java runtime included (no JRE needed). jpackage does not cross-compile:
+// run this on the Mac for the Mac version and on Windows for the Windows version.
 tasks.register<Exec>("jpackage") {
     group = "distribution"
-    description = "Empacota o Cairnfire com um runtime Java embutido em build/jpackage/"
+    description = "Packages Cairnfire with an embedded Java runtime into build/jpackage/"
     dependsOn(tasks.installDist)
 
     val isWindows = System.getProperty("os.name").lowercase().contains("win")
@@ -52,7 +54,7 @@ tasks.register<Exec>("jpackage") {
 
     doFirst {
         delete(dest)
-        if (!jpackage.exists()) throw GradleException("jpackage não encontrado em $jpackage (precisas de um JDK, não de um JRE)")
+        if (!jpackage.exists()) throw GradleException("jpackage not found at $jpackage (you need a JDK, not a JRE)")
     }
     commandLine(
         buildList {
@@ -60,20 +62,21 @@ tasks.register<Exec>("jpackage") {
             addAll(listOf("--type", "app-image", "--name", "cairnfire", "--app-version", "1.0.0"))
             addAll(listOf("--input", input.path, "--main-jar", "cairnfire.jar", "--main-class", "cairnfire.MainKt"))
             addAll(listOf("--dest", dest.path))
-            // Runtime mínimo: só o que a CLI e a janela (Compose/Skia + Swing) usam, em vez do JDK inteiro.
+            // Minimal runtime: only what the CLI and the window (Compose/Skia + Swing) use, instead of the whole JDK.
             addAll(listOf("--add-modules", "java.base,java.desktop,java.logging,java.management,java.naming,java.prefs,jdk.unsupported"))
             addAll(listOf("--jlink-options", "--strip-debug --no-man-pages --no-header-files --compress zip-9"))
+            addAll(listOf("--java-options", "--enable-native-access=ALL-UNNAMED"))
             val icon = file("assets/" + if (isWindows) "icon.ico" else "icon.icns")
             if (icon.exists()) addAll(listOf("--icon", icon.path))
             if (isWindows) {
-                // cairnfire.exe é a linha de comandos (precisa de consola); cairnfire-gui.exe abre a janela, sem consola.
+                // cairnfire.exe is the command line (needs a console); cairnfire-gui.exe opens the window, without a console.
                 add("--win-console")
                 val gui = layout.buildDirectory.file("jpackage-gui.properties").get().asFile
                 gui.parentFile.mkdirs()
                 gui.writeText("arguments=gui\nwin-console=false\n")
                 addAll(listOf("--add-launcher", "cairnfire-gui=${gui.path}"))
             } else {
-                // Sem argumentos (duplo clique na app) abre a janela; com argumentos é a linha de comandos.
+                // With no arguments (double-clicking the app) it opens the window; with arguments it is the command line.
                 addAll(listOf("--arguments", "gui"))
             }
         },
