@@ -1,0 +1,17 @@
+# Gradle / Kotlin
+.gradle/
+.kotlin/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# Locais do Claude Code
+.claude/
