@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
+import kotlin.io.path.deleteIfExists
 import kotlin.io.path.div
 import kotlin.io.path.exists
 import kotlin.io.path.readText
@@ -77,6 +78,11 @@ object ConfigStore {
     fun loadState(game: String): Map<String, String> {
         val f = stateFile(game)
         return if (f.exists()) json.decodeFromString(GameState.serializer(), f.readText()).files else emptyMap()
+    }
+
+    /** Esquece a última sincronização de um jogo (ao removê-lo), para não herdar uma "base" velha se voltar. */
+    fun deleteState(game: String) {
+        stateFile(game).deleteIfExists()
     }
 
     fun saveState(game: String, files: Map<String, String>) {

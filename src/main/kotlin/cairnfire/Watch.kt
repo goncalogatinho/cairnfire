@@ -1,5 +1,6 @@
 package cairnfire
 
+import com.github.ajalt.clikt.core.CliktError
 import java.io.IOException
 import java.nio.file.FileSystems
 import java.nio.file.Files
@@ -58,4 +59,38 @@ class ChangeWatcher : AutoCloseable {
     }
 
     override fun close() = service.close()
+}
+
+/** As pastas a vigiar: os saves locais de cada jogo e a respetiva pasta na cloud. */
+fun watchedDirs(config: Config = ConfigStore.load()): List<Path> {
+    val platform = Platform.current()
+    return config.games.flatMap { game ->
+        listOfNotNull(
+            game.paths[platform.key]?.let(::expandPath),
+            Path.of(config.syncRoot).resolve(game.name),
+        )
+    }
+}
+
+/**
+ * O ciclo do modo automático: corre [cycle] e depois espera por alterações (ou [intervalSec] segundos) antes de
+ * repetir. Não termina sozinho: pára quando a thread é interrompida. Erros previsíveis (cloud não montada, E/S)
+ * vão para [onError] e o ciclo tenta outra vez mais tarde.
+ */
+fun watchLoop(intervalSec: Int, debounceSec: Int, onError: (String) -> Unit, cycle: () -> Unit) {
+    ChangeWatcher().use { watcher ->
+        while (true) {
+            try {
+                cycle()
+                watchedDirs().forEach(watcher::watch)
+            } catch (e: CliktError) {
+                onError(e.message ?: "erro") // por exemplo a cloud não está montada; tenta-se de novo mais tarde
+            } catch (e: IOException) {
+                onError("Erro de E/S: ${e.message}")
+            }
+            if (watcher.awaitChange(intervalSec * 1000L)) {
+                watcher.awaitQuiet(debounceSec * 1000L, maxMillis = 60_000)
+            }
+        }
+    }
 }

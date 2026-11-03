@@ -6,7 +6,7 @@ A luz da chama ilumina as pedras, o fundo e o título.
 Uso (precisa de Pillow; o .icns precisa do `iconutil`, que só existe no macOS):
     python3 assets/make_logo.py
 
-Escreve em assets/: logo.png/svg, banner.png/svg, icon.icns (macOS) e icon.ico (Windows).
+Escreve em assets/: logo.png/svg, banner.png/svg, banner-ui.png (para a janela da app), icon.icns (macOS) e icon.ico (Windows).
 """
 import math
 import os
@@ -220,6 +220,13 @@ def main():
     draw_title(ban, 46, 14, FLAME_CENTER[0] + 4, FLAME_CENTER[1] + 4)
     ban.image(8).save(os.path.join(OUT, "banner.png"))
     write("banner.svg", ban.svg())
+
+    # ---- banner para a janela da app: com margem, para o brilho se desvanecer antes das bordas ----
+    ui = Canvas(232, 44)
+    draw_cairn(ui, 20, 10, 32, 16)
+    draw_title(ui, 62, 20, FLAME_CENTER[0] + 20, FLAME_CENTER[1] + 10)
+    ui.image(4).save(os.path.join(OUT, "banner-ui.png"))
+    print("escrito banner-ui.png")
 
     # ---- ícones ----
     base = Image.new("RGBA", (1024, 1024), (0, 0, 0, 0))

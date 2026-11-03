@@ -95,6 +95,19 @@ class SyncCmd : CliktCommand(name = "sync") {
     override fun run() = runGames(game, dryRun) { echo(it) }
 }
 
+class GuiCmd : CliktCommand(name = "gui") {
+    override fun help(context: Context) = "Abre a janela do Cairnfire."
+
+    private val preview by option("--preview", hidden = true, help = "Desenha a janela com dados de exemplo para um PNG")
+
+    private val variant by option("--preview-variant", hidden = true, help = "list, expanded ou dialog").default("list")
+
+    override fun run() {
+        val out = preview
+        if (out != null) cairnfire.gui.renderPreview(Path.of(out), variant) else cairnfire.gui.launchGui()
+    }
+}
+
 class WatchCmd : CliktCommand(name = "watch") {
     override fun help(context: Context) =
         "Fica a correr e sincroniza sozinho quando os saves (ou a cloud) mudam. Termina com Ctrl+C."
@@ -109,42 +122,15 @@ class WatchCmd : CliktCommand(name = "watch") {
         val say = { line: String -> echo("${LocalTime.now().withNano(0)}  $line") }
         say("A vigiar os saves (a cada ${interval}s e a cada alteração). Ctrl+C para parar.")
 
-        ChangeWatcher().use { watcher ->
-            while (true) {
-                try {
-                    runGames(null, dryRun = false, quiet = true, echo = say)
-                    watchedDirs().forEach(watcher::watch)
-                } catch (e: CliktError) {
-                    say("Erro: ${e.message}") // por exemplo a cloud não está montada; tenta-se de novo mais tarde
-                } catch (e: IOException) {
-                    say("Erro de E/S: ${e.message}")
-                }
-                if (watcher.awaitChange(interval * 1000L)) {
-                    watcher.awaitQuiet(debounce * 1000L, maxMillis = 60_000)
-                }
-            }
+        watchLoop(interval, debounce, onError = { say("Erro: $it") }) {
+            runGames(null, dryRun = false, quiet = true, echo = say)
         }
-    }
-}
-
-/** As pastas a vigiar: os saves locais de cada jogo e a respetiva pasta na cloud. */
-private fun watchedDirs(): List<Path> {
-    val config = ConfigStore.load()
-    val platform = Platform.current()
-    return config.games.flatMap { game ->
-        listOfNotNull(
-            game.paths[platform.key]?.let(::expandPath),
-            Path.of(config.syncRoot).resolve(game.name),
-        )
     }
 }
 
 private fun runGames(only: String?, dryRun: Boolean, quiet: Boolean = false, echo: (String) -> Unit) {
     val config = ConfigStore.load()
-    val syncRoot = Path.of(config.syncRoot)
-    if (!syncRoot.isDirectory()) {
-        throw CliktError("A pasta de sincronização '$syncRoot' não existe (a cloud está montada?). Nada foi alterado.")
-    }
+    requireSyncRoot(config)
 
     val games = if (only == null) config.games else listOf(
         config.games.find { it.name == only } ?: throw CliktError("Jogo '$only' não registado."),
@@ -154,36 +140,16 @@ private fun runGames(only: String?, dryRun: Boolean, quiet: Boolean = false, ech
         return
     }
 
-    val platform = Platform.current()
     val engine = SyncEngine(ConfigStore.backupRoot)
-
     for (game in games) {
-        val rawLocal = game.paths[platform.key]
-        if (rawLocal == null) {
-            echo("[${game.name}] sem caminho configurado para ${platform.key}; ignorado.")
-            continue
-        }
-        val localDir = expandPath(rawLocal)
-        val remoteDir = syncRoot.resolve(game.name)
-        val base = ConfigStore.loadState(game.name)
-
-        // Proteção: se uma das pastas desapareceu mas já sincronizámos antes, isto parece um erro
-        // (caminho errado, disco desmontado) e não uma decisão de apagar tudo.
-        if (base.isNotEmpty() && !localDir.exists()) {
-            echo("[${game.name}] a pasta local '$localDir' não existe; ignorado para não apagar nada na cloud.")
-            continue
-        }
-        if (base.isNotEmpty() && !remoteDir.exists()) {
-            echo("[${game.name}] a pasta '$remoteDir' desapareceu da cloud; ignorado para não apagar nada local.")
-            continue
-        }
-
-        val result = engine.sync(game.name, localDir, remoteDir, base, dryRun)
-        if (result.actions.isEmpty()) {
+        val report = syncGame(config, game, dryRun, engine)
+        if (report.skipped != null) {
+            echo("[${game.name}] ${report.skipped}")
+        } else if (report.actions.isEmpty()) {
             if (!quiet) echo("[${game.name}] tudo sincronizado.")
         } else {
             echo("[${game.name}] ${if (dryRun) "a fazer" else "feito"}:")
-            for (a in result.actions) {
+            for (a in report.actions) {
                 val flag = if (a.conflict) "  !" else "   "
                 echo("$flag ${a.kind.label.padEnd(16)} ${a.path}${a.note?.let { "  ($it)" } ?: ""}")
             }
@@ -192,14 +158,13 @@ private fun runGames(only: String?, dryRun: Boolean, quiet: Boolean = false, ech
                 echo("    (versões substituídas ou apagadas ficam em $backupDir)")
             }
         }
-        if (!dryRun) ConfigStore.saveState(game.name, result.newBase)
     }
 }
 
 fun main(args: Array<String>) =
     Cairnfire()
         .subcommands(
-            InitCmd(), AddCmd(), ListCmd(), StatusCmd(), SyncCmd(), WatchCmd(),
+            InitCmd(), AddCmd(), ListCmd(), StatusCmd(), SyncCmd(), WatchCmd(), GuiCmd(),
             AutostartCmd().subcommands(AutostartInstallCmd(), AutostartUninstallCmd(), AutostartStatusCmd()),
         )
         .main(args)

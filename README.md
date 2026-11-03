@@ -85,15 +85,39 @@ qualquer lado, adiciona essa pasta `bin` ao `PATH`.
 ./gradlew jpackage
 ```
 
-Gera em `build/jpackage/` uma app com um Java mínimo lá dentro (cerca de 37 MB), por isso a máquina onde a usares
-não precisa de ter Java:
+Gera em `build/jpackage/` uma app com um Java mínimo lá dentro (cerca de 90 MB, por causa da janela), por isso a
+máquina onde a usares não precisa de ter Java:
 
 - **macOS:** `build/jpackage/cairnfire.app` (executável em `cairnfire.app/Contents/MacOS/cairnfire`)
-- **Windows:** `build\jpackage\cairnfire\cairnfire.exe`
+- **Windows:** `build\jpackage\cairnfire\cairnfire.exe` (linha de comandos) e `cairnfire-gui.exe` (abre a janela, sem consola)
 
 O `jpackage` não faz cross-compile: corre o comando em cada sistema para gerar a versão desse sistema. A app não
 está assinada, por isso, se a copiares de outro computador, o macOS pode bloqueá-la; o mais simples é compilar em
 cada máquina.
+
+## A janela
+
+Para quem prefere cliques à linha de comandos, o Cairnfire também tem uma janela simples:
+
+```bash
+cairnfire gui
+```
+
+<p align="center">
+  <img src="assets/screenshot.png" alt="A janela do Cairnfire" width="640">
+</p>
+
+- **Pasta da cloud** e **lista de jogos**, cada um com o seu estado: sincronizado, N alterações (laranja) ou
+  conflito (vermelho). Clica num jogo para ver exatamente o que vai ser copiado.
+- **Sincronizar** um jogo ou **Sincronizar tudo**. Antes de qualquer cópia, a janela mostra o que vai acontecer.
+- **Adicionar / Editar / Remover** jogos. Remover só tira o jogo da lista: nunca apaga saves.
+- **Automático** liga o modo `watch` dentro da janela (só enquanto ela estiver aberta). Para sincronizar também
+  com a janela fechada, usa o `autostart`.
+- **Atividade** mostra o que foi feito, com os erros a vermelho.
+
+A janela usa o mesmo motor da linha de comandos, por isso as proteções (backups, cópia segura, cloud não montada)
+são exatamente as mesmas. Na app empacotada (`jpackage`), abrir sem argumentos, por exemplo com duplo clique,
+abre a janela.
 
 ## Começar a usar
 
@@ -145,6 +169,7 @@ As linhas marcadas com `!` são conflitos: o mais recente ganhou e a outra vers�
 | `status [jogo]` | Mostra o que seria copiado, sem alterar nada |
 | `sync [jogo] [--dry-run]` | Sincroniza (um jogo ou todos) |
 | `watch [--interval 60] [--debounce 5]` | Fica a correr e sincroniza sozinho |
+| `gui` | Abre a janela |
 | `autostart install` / `uninstall` / `status` | Faz o `watch` arrancar no login |
 
 ## Modo automático
@@ -195,19 +220,22 @@ Tudo fica em `~/.cairnfire/` (ou na pasta indicada pela variável `CAIRNFIRE_HOM
 ## Como está organizado o código
 
 ```
-assets/                      logo, banner e ícones (gerados por assets/make_logo.py)
+assets/                      logo, banner, ícones e captura de ecrã (os logos vêm de assets/make_logo.py)
 src/main/kotlin/cairnfire/
-├── Main.kt        comandos da linha de comandos (Clikt) e o ciclo que corre cada jogo
+├── Main.kt        comandos da linha de comandos (Clikt)
+├── Sync.kt        sincronizar um jogo (partilhado pela CLI e pela janela)
 ├── SyncEngine.kt  o cérebro: decide o que copiar (merge a 3 vias), faz backups, calcula o novo estado
 ├── Files.kt       hashes SHA-256, listagem de pastas, expansão de caminhos, cópia segura
 ├── Config.kt      leitura e escrita da configuração e do estado em JSON
 ├── Watch.kt       vigia pastas com o WatchService do Java
-└── Autostart.kt   arranque automático (launchd no macOS, pasta Arranque no Windows)
+├── Autostart.kt   arranque automático (launchd no macOS, pasta Arranque no Windows)
+└── gui/           a janela (Compose Desktop): tema, componentes pixel, ecrãs e estado
 src/test/kotlin/cairnfire/   testes automáticos
 ```
 
 Tecnologias: Kotlin/JVM, [Gradle](https://gradle.org/), [Clikt](https://ajalt.github.io/clikt/) (linha de comandos),
-[kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization) (JSON).
+[kotlinx.serialization](https://github.com/Kotlin/kotlinx.serialization) (JSON),
+[Compose Multiplatform](https://www.jetbrains.com/compose-multiplatform/) (a janela).
 
 ## Testes
 
@@ -228,13 +256,14 @@ O Cairnfire está em desenvolvimento e é um projeto de estudo. Convém saber qu
   o "mais recente" pode não ser o certo. É para isso que existem os backups.
 - **Depende do teu cliente de cloud.** Se o Drive/Dropbox ainda não descarregou o save mais recente, o
   Cairnfire só vê a versão antiga. Espera que a cloud acabe de sincronizar antes de abrires o jogo no outro lado.
-- **Não tem interface gráfica** (por enquanto) e o arranque automático não funciona em Linux.
+- **A janela é nova e simples:** foi testada no macOS (e só o arranque e o desenho, não todos os cliques). O
+  arranque automático não funciona em Linux.
 - Faz sempre uma cópia dos teus saves antes de o experimentares pela primeira vez com um jogo importante.
 
 ## Ideias para o futuro
 
 - Instalador (`.dmg` / `.msi`) e assinatura da app
-- Interface gráfica com Compose Multiplatform
+- Mais da janela: resolver conflitos escolhendo a versão, ver e restaurar backups
 - Deteção de relógios desalinhados e avisos mais claros nos conflitos
 - Arranque automático no Linux (systemd)
 
@@ -243,7 +272,7 @@ O Cairnfire está em desenvolvimento e é um projeto de estudo. Convém saber qu
 O símbolo é um *cairn* (aquelas pilhas de pedras que marcam um caminho) com a pedra do topo a arder: a chama
 ilumina as pedras e o título. Está desenhado em pixel art e é gerado por código, em
 [`assets/make_logo.py`](assets/make_logo.py) (`python3 assets/make_logo.py`, precisa de Pillow), que produz
-o banner, o logo em PNG/SVG e os ícones da app (`icon.icns` para macOS e `icon.ico` para Windows).
+o banner, o logo em PNG/SVG, o banner da janela e os ícones da app (`icon.icns` para macOS e `icon.ico` para Windows).
 
 ## Contribuir
 
